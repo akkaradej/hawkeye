@@ -20,6 +20,13 @@ export type AgentRow = {
   recent: AgentStep[]
   result: string | null
   tint: number
+  /** The model it runs on, as the engine named it; null until known. */
+  model: string | null
+  /** Its reasoning effort (`low`..`max` or a budget); null until a request shows it. */
+  effort: string | null
+  /** Tokens its last request carried, and how full of the context window that is (0 to 100); null until one answers. */
+  ctxTokens: number | null
+  ctxPercent: number | null
 }
 /** The sub-agents of this session. */
 export type AgentsState = {
