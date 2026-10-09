@@ -4,6 +4,10 @@ export type AgentActivity = 'reading' | 'building' | 'running' | 'testing' | 'te
 export type AgentRowStatus = 'pending' | 'running' | 'waiting' | 'idle' | 'completed' | 'failed' | 'killed'
 /** One step a sub-agent took: a tool call, in plain words. */
 export type AgentStep = { text: string; at: number }
+/** A sub-agent's own to-do list, as its last TodoWrite left it. */
+export type AgentPlan = { done: number; total: number; current: string | null }
+/** One task a sub-agent made with TaskCreate, kept to count its plan. */
+export type AgentTask = { id: string; subject: string; activeForm: string | null; status: 'pending' | 'in_progress' | 'completed' }
 /** One sub-agent, as the Agents band and panel show it. */
 export type AgentRow = {
   id: string
@@ -17,6 +21,10 @@ export type AgentRow = {
   activityAt: number | null
   step: string | null
   tools: number
+  /** Its to-do list, once it has written one; null while it works without a plan. */
+  plan: AgentPlan | null
+  /** The tasks it made with TaskCreate (a TodoWrite list needs none); its plan is counted from them. */
+  tasks: AgentTask[]
   recent: AgentStep[]
   result: string | null
   tint: number
@@ -48,6 +56,7 @@ declare module 'claude-code' {
       agentsBandEnabled: boolean
       agents: AgentsState
       agentsTick: number
+      agentsOpenSteps: string[]
       percent: number | null
       limits: { fiveHour: number | null; sevenDay: number | null }
     }
