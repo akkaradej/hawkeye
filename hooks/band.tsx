@@ -1,10 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
-import { DEFAULT_WARM_HOURS, SPINNER, TTL_MS, minutes } from './format'
+import { SPINNER, TTL_MS, minutes } from './format'
+import { settings } from './settings'
 
 const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
 const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
-const warmHours = atom({ plugin: 'my-mods', key: 'cacheWarmHours' } as const, DEFAULT_WARM_HOURS)
+const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
 const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
 // Reborn: reborn.tsx runs the flow; the button here asks for it, and the spinner follows its phase
 const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
@@ -102,7 +103,8 @@ async function row($: EngineInterface, e: any) {
   const t = await $.clock.now()
   const left = hit + TTL_MS - t
   // with auto ping the cache lives several 1 hour cycles: show which one this is
-  const hours = await read($, warmHours)
+  await read($, settingsPing)
+  const hours = settings.cacheWarmHours
   // the last ping is the cap: while one is left the next ping renews the cache, so the cycle shows without the time; after it, the time
   const pings = await read($, cachePings)
   const hasPingLeft = hours > 1 && pings < hours - 1

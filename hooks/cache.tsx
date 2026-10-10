@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
-import { DEFAULT_WARM_HOURS, HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS, clock } from './format'
+import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
+import { HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS, clock } from './format'
 
 const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
 // the last finished turn; pings refresh the cache but do not count as use
@@ -9,11 +10,11 @@ const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
 const notified = atom({ plugin: 'my-mods', key: 'notified' } as const, false)
 const isPinging = atom({ plugin: 'my-mods', key: 'isPinging' } as const, false)
 // how long the cache is kept warm after the last turn, and how long before a cache cycle ends the ping goes out
-const warmHours = atom({ plugin: 'my-mods', key: 'cacheWarmHours' } as const, DEFAULT_WARM_HOURS)
+// the value is in ./settings; this atom only redraws
+const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
 // pings since the last turn: the band counts the cache cycles with it
 const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
 
-export const CACHE_WARM_STORE_KEY = 'cacheWarmHours'
 const SETTINGS_PANE = 'cache-settings'
 const RETRY_MS = 60 * 1000
 
@@ -39,7 +40,7 @@ function startTicker($: EngineInterface) {
     const t = await $.clock.now()
     const left = cycleEnd(hit) - t
     const turn = (await read($, lastTurnAt)) ?? hit
-    const hours = await read($, warmHours)
+    const hours = settings.cacheWarmHours
     // one ping fewer than the warm hours: a window of N hours is N cycles, and a ping that close to the cycle end would otherwise repeat
     if (needsAnotherPing(hit, turn, hours) && (await read($, cachePings)) < hours - 1) {
       const trigger = PING_BEFORE_MIN * MIN_MS
@@ -97,7 +98,8 @@ export function registerCache(on: On) {
 
   on('ui.render', { component: 'Pane', requestId: SETTINGS_PANE }, async ($, e) => {
     const { Box, Button, Select, Text } = $.ui.resolve(e)
-    const hours = await read($, warmHours)
+    await read($, settingsPing)
+    const hours = settings.cacheWarmHours
     const isWarming = await read($, isPinging)
     let frame = ''
     if (isWarming) {
@@ -105,8 +107,9 @@ export function registerCache(on: On) {
       frame = SPINNER[Math.floor((await $.clock.now()) / 1000) % SPINNER.length]
     }
     const chooseWarm = async (value: number) => {
-      await update($, warmHours, () => value)
-      await $.store.set(CACHE_WARM_STORE_KEY, value).catch(() => undefined)
+      const all = setSetting('cacheWarmHours', value)
+      await update($, settingsPing, p => !p)
+      await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
     }
     return (
       <Box flexDirection="column">

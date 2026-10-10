@@ -1,8 +1,16 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
+import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 
-// auto-answer AskUserQuestion with the recommended options; per session, on at every session start
-const autoRecommend = atom({ plugin: 'my-mods', key: 'autoRecommend' } as const, true)
+// auto-answer AskUserQuestion with the recommended options; on by default, the setting is kept across /clear
+// the value is in ./settings; this atom only redraws
+const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
+async function toggleAuto($: EngineInterface) {
+  const next = !settings.autoRecommend
+  const all = setSetting('autoRecommend', next)
+  await update($, settingsPing, p => !p)
+  await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
+}
 // what was auto-answered; reset at session start, or by the pane's clear button
 const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 // whether the pane is drawn now, so the band button can offer to clear it
@@ -58,7 +66,8 @@ export function registerAutoRecommend(on: On) {
     const below = await next(e)
     try {
       if ((e.props ?? e).hasSurvey) return below
-      const auto = await read($, autoRecommend)
+      await read($, settingsPing)
+      const auto = settings.autoRecommend
       const isUp = await read($, paneUp)
       const { Box, Button, Text } = $.ui.resolve(e)
       const button = (
@@ -87,7 +96,7 @@ export function registerAutoRecommend(on: On) {
   // answer AskUserQuestion with each question's "(Recommended)" option(s), when every
   // question is a plain choice with one; otherwise the dialog opens as usual
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
-    if (!(await read($, autoRecommend))) return next(e)
+    if (!settings.autoRecommend) return next(e)
     const answers: Record<string, string> = {}
     for (const q of e.questions as any[]) {
       if (q.kind && q.kind !== 'choice') return next(e)
@@ -107,13 +116,14 @@ export function registerAutoRecommend(on: On) {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Button, Text } = $.ui.resolve(e)
-    const auto = await read($, autoRecommend)
+    await read($, settingsPing)
+    const auto = settings.autoRecommend
     const list = await read($, history)
     const room = Math.max(1, Math.floor(((e.viewport?.rows ?? 24) - 6) / 4))
     return (
       <Box flexDirection="column">
         <Box>
-          <Button key="toggle" label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void update($, autoRecommend, v => !v)} />
+          <Button key="toggle" label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void toggleAuto($)} />
           <Text> </Text>
           <Button key="clear" label="clear history and close" onPress={() => void clearAndClose($)} />
         </Box>
