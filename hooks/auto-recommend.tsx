@@ -11,7 +11,7 @@ export const AUTO_RECOMMEND_COMMANDS = [
   { name: 'auto-recommend', description: 'Open the auto-recommend pane (toggle, history of auto answers)' },
 ]
 
-const openPane = ($: EngineInterface, focus = true) => $.ui.open({ id: PANE, title: 'Auto-recommend', focus })
+const openPane = ($: EngineInterface, focus = true) => $.ui.open({ id: PANE, title: 'Auto-recommend', ...(focus ? { focus: true as const } : {}) })
 
 // the band button: open the pane, or close it when it is already up
 async function togglePane($: EngineInterface) {
@@ -41,7 +41,7 @@ export function registerAutoRecommend(on: On) {
       const button = (
         <Box>
           <Text> </Text>
-          <Button key="auto" label={auto ? '✓ auto-recommend' : '○ auto-recommend'} onPress={() => void togglePane($)} />
+          <Button key="auto" label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => void togglePane($)} />
         </Box>
       )
       return below ? (
@@ -73,7 +73,7 @@ export function registerAutoRecommend(on: On) {
     const entries = Object.entries(answers).map(([question, answer]) => ({ question, answer }))
     await update($, history, list => [...list, { at, entries }].slice(-200))
     // show the new entry, without taking the keyboard from the prompt
-    await openPane($, false).catch(() => {})
+    await openPane($, false).catch(err => $.ui.toast(`Auto-recommend pane failed to open: ${String(err)}`, { timeoutMs: 20000 }))
     $.ui.toast('Auto-accepted recommended answers')
     return { result: { questions: e.questions, answers } } as any
   }).catch(($, e, next) => next(e))
@@ -82,21 +82,30 @@ export function registerAutoRecommend(on: On) {
     const { Box, Button, Text } = $.ui.resolve(e)
     const auto = await read($, autoRecommend)
     const list = await read($, history)
-    const room = Math.max(1, Math.floor(((e.viewport?.rows ?? 24) - 6) / 3))
+    const room = Math.max(1, Math.floor(((e.viewport?.rows ?? 24) - 6) / 4))
     return (
       <Box flexDirection="column">
         <Box>
-          <Button key="toggle" autoFocus label={auto ? '✓ auto-recommend: on' : '○ auto-recommend: off'} onPress={() => void update($, autoRecommend, v => !v)} />
+          <Button key="toggle" autoFocus label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void update($, autoRecommend, v => !v)} />
           <Text> </Text>
           <Button key="clear" label="clear history" onPress={() => void update($, history, () => [])} />
         </Box>
         <Text> </Text>
         {list.length === 0 && <Text dimColor>No auto answers yet.</Text>}
         {list.slice(-room).reverse().map(item => (
-          <Box flexDirection="column">
-            <Text dimColor>{item.at}</Text>
-            {item.entries.map(x => (
-              <Text>{x.question} → {x.answer}</Text>
+          <Box flexDirection="column" marginBottom={1}>
+            <Text dimColor>{'── '}{item.at}{' ──'}</Text>
+            {item.entries.map((x, i) => (
+              <Box flexDirection="column" marginTop={i === 0 ? 0 : 1}>
+                <Box>
+                  <Text bold dimColor>Q  </Text>
+                  <Box flexShrink={1}><Text bold wrap="wrap">{x.question}</Text></Box>
+                </Box>
+                <Box>
+                  <Text bold color="success">A  </Text>
+                  <Box flexShrink={1}><Text color="success" wrap="wrap">{x.answer.replace(/\s*\(recommended\)/gi, '')}</Text></Box>
+                </Box>
+              </Box>
             ))}
           </Box>
         ))}
