@@ -9,5 +9,5 @@ test('session.start registers every command', async ($, on) => {
   on('store.get', async () => ({ value: undefined }) as any)
   on('session.start', async (_$: any, e: any) => ({ cwd: e.cwd }) as any)
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  expect(names.sort()).toEqual(['agents-panel', 'auto-recommend', 'cache-ping', 'cache-status', 'reborn'])
+  expect(names.sort()).toEqual(['auto-recommend', 'cache-ping', 'cache-status', 'reborn'])
 })
