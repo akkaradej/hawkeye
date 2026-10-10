@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
-// 'writing' while the handoff turn runs, 'clearing' while /clear runs, null otherwise
+// 'writing' while the handoff is written, 'clearing' while /clear runs, null otherwise
 const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 // ticks every second while Reborn works, to turn the spinner
 const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
@@ -10,26 +10,44 @@ const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', 
 
 const PENDING_KEY = 'rebornPending'
 
-// A turn, so it can check git; it writes no file, so sessions saving together never share one.
-const HANDOFF_PROMPT = [
+// The handoff is written by a fork: the same model over this chat, no tools and no turn in the chat, so nothing is
+// printed. It cannot run git, so the hook runs it and puts the output in the prompt.
+// The handoff goes in as a row the person never sees; only this short prompt shows, to start the reply.
+const GIT_STATE: [string, string[]][] = [
+  ['Branch', ['branch', '--show-current']],
+  ['Status (the first line says if it is ahead of or behind its upstream)', ['status', '-sb']],
+  ['Last commits', ['log', '--oneline', '-5']],
+]
+
+const handoffPrompt = (git: string) => [
   'This conversation is about to be cleared. Write a handoff so a fresh session can carry on with no other context.',
   '',
-  'First check the git state with commands: `git branch --show-current`, `git status --short`, `git log --oneline -5`, and whether the branch is pushed. Do not write or change any file.',
+  'The git state, read just now:',
+  git,
   '',
-  'Then reply with the handoff only, no preamble or farewell, in plain markdown with these sections:',
+  'Reply with the handoff only, no preamble or farewell, in plain markdown with these sections:',
   '- Goal: one or two lines.',
-  '- State: what is done and how it was checked, the files touched, and the git state you just read (branch, uncommitted files, unpushed commits).',
+  '- State: what is done and how it was checked, the files touched, and the git state above (branch, uncommitted files, unpushed commits).',
   '- Open work: what is half done, and the concrete blocker.',
   '- Next up: ordered. Make the first one runnable: a command, a file path or a decision. Mark every step that needs the user with "needs user".',
   '- Decisions and constraints: what was decided and why, and the limits on what is allowed.',
   '- Lessons: approaches that failed, and how the user wants the work done.',
   '',
-  'Never include secrets, environment values or raw logs. Write in the language the user writes in. Short bullets.',
+  'Do not use tools. Never include secrets, environment values or raw logs. Write in the language the user writes in. Short bullets.',
 ].join('\n')
 
-// The handoff goes in as a row the person never sees; only this short prompt shows, to start the reply.
+async function gitState($: EngineInterface) {
+  const parts = await Promise.all(
+    GIT_STATE.map(async ([title, args]) => {
+      const r = await $.process.run(['git', ...args], { timeoutMs: 10_000 }).catch(() => null)
+      return `${title}:\n${r && r.exitCode === 0 ? r.stdout.trim() || '(empty)' : '(not available)'}`
+    }),
+  )
+  return parts.join('\n\n')
+}
+
 const handoffNote = (handoff: string) => `Handoff from the previous session (it was cleared):\n\n${handoff.trim()}`
-const CONTINUE_PROMPT = 'Read the handoff above, say in two lines where things stand and what is next, then wait for me.'
+const CONTINUE_PROMPT = 'Read the handoff, say in two lines where things stand and what is next, then wait for me.'
 
 // The flow lives in these, not in atoms: a /clear resets the atoms, not the module.
 let stage: 'writing' | 'clearing' | null = null
@@ -51,13 +69,21 @@ async function finish($: EngineInterface) {
   if (stage === 'writing' && queued) {
     queued = false
     try {
-      await $.prompt.submit({ text: HANDOFF_PROMPT })
+      const forked = await $.model.fork({ prompt: handoffPrompt(await gitState($)) })
+      if (forked.isAnswered && forked.text.trim()) {
+        handoff = forked.text
+        const session = await $.session.id().catch(() => '')
+        await $.store.set(PENDING_KEY, { session, text: forked.text }).catch(() => undefined)
+      } else {
+        const why = forked.isAnswered ? 'empty-reply' : forked.reason
+        throw new Error(why === 'nothing-to-fork' ? 'nothing to hand off yet' : `the fork gave no handoff (${why})`)
+      }
     } catch (error) {
       stage = null
       await update($, phase, () => null)
-      $.ui.toast(`Reborn failed: ${String(error)}`, { timeoutMs: 20000 })
+      $.ui.toast(`Reborn failed: ${error instanceof Error ? error.message : String(error)}`, { timeoutMs: 20000 })
+      return
     }
-    return
   }
   // Kept in the store too: a reload between the writing and the clear loses the module, not the store.
   if (handoff === undefined && stage === null) {
@@ -77,7 +103,7 @@ async function finish($: EngineInterface) {
     await $.command.run({ command: 'clear', args: '' })
     await $.store.delete(PENDING_KEY).catch(() => undefined)
     await $.session.append({ message: { type: 'user', content: [{ type: 'text', text: handoffNote(text) }] } })
-    await $.prompt.submit({ text: CONTINUE_PROMPT })
+    await $.prompt.submit({ text: CONTINUE_PROMPT, asUser: true })
   } catch (error) {
     $.ui.toast(`Reborn failed: ${String(error)}`, { timeoutMs: 20000 })
   } finally {
@@ -101,7 +127,8 @@ export const REBORN_COMMANDS = [
 ]
 
 export function registerReborn(on: On) {
-  on('command.run', { command: 'reborn' }, async $ => {
+  on('command.run', async ($, e, next) => {
+    if (e.command !== 'reborn') return next(e)
     await reborn($)
     return { text: 'Reborning…' }
   })
@@ -109,23 +136,6 @@ export function registerReborn(on: On) {
     const message = `/reborn failed: ${String(next.error)}`
     $.ui.toast(message, { timeoutMs: 20000 })
     return { text: message }
-  })
-
-  // The reply to the handoff turn is the handoff.
-  on('turn.complete', { reason: ['answer', 'aborted', 'refusal'] }, async ($, e, next) => {
-    const result = await next(e)
-    if (!e.agentId && stage === 'writing' && !queued) {
-      if (e.reason === 'answer' && e.answer.trim()) {
-        handoff = e.answer
-        const session = await $.session.id().catch(() => '')
-        await $.store.set(PENDING_KEY, { session, text: e.answer }).catch(() => undefined)
-      } else {
-        stage = null
-        await update($, phase, () => null)
-        $.ui.toast('Reborn: the handoff was not written, nothing was cleared')
-      }
-    }
-    return result
   })
 
   // the button, at the right of the band; a spinner replaces it while it works
