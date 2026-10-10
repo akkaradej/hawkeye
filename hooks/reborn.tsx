@@ -68,6 +68,7 @@ async function reborn($: EngineInterface) {
 async function finish($: EngineInterface) {
   if (stage === 'writing' && queued) {
     queued = false
+    $.ui.toast('Reborn started: writing the handoff…', { timeoutMs: 5000 })
     try {
       const forked = await $.model.fork({ prompt: handoffPrompt(await gitState($)) })
       if (forked.isAnswered && forked.text.trim()) {
