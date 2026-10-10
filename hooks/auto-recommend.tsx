@@ -5,22 +5,44 @@ import type { EngineInterface, On } from 'claude-code'
 const autoRecommend = atom({ plugin: 'my-mods', key: 'autoRecommend' } as const, true)
 // what was auto-answered; reset at session start, or by the pane's clear button
 const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
+// whether the pane is drawn now, so the band button can offer to clear it
+const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
 
 export const AUTO_RECOMMEND_COMMANDS = [
   { name: 'auto-recommend', description: 'Open the auto-recommend pane (toggle, history of auto answers)' },
 ]
 
-const openPane = ($: EngineInterface, focus = true) => $.ui.open({ id: PANE, title: 'Auto-recommend', ...(focus ? { focus: true as const } : {}) })
-
-// the band button: open the pane, or close it when it is already up
-async function togglePane($: EngineInterface) {
-  const isUp = (await $.ui.panes()).some(pane => pane.id === PANE)
-  if (isUp) await $.ui.close({ id: PANE })
-  else await openPane($)
+// opens the pane and records it, so the band button follows even if the ui.open hook does not run for our own call
+async function openPane($: EngineInterface) {
+  const result = await $.ui.open({ id: PANE, title: 'Auto-recommend' })
+  await update($, paneUp, () => !!(result as any)?.isPlaced)
+  return result
 }
 
+// empty the history and close the pane: the pane's clear button, and the band's while the pane is up
+async function clearAndClose($: EngineInterface) {
+  await update($, history, () => [])
+  await $.ui.close({ id: PANE })
+  await update($, paneUp, () => false)
+}
+
+// the band button while the pane is down: open it
+const openFromBand = ($: EngineInterface) => void openPane($)
+
 export function registerAutoRecommend(on: On) {
+  // keep paneUp in step with the pane, however it opens or closes
+  on('ui.open', { id: PANE }, async ($, e, next) => {
+    const result = await next(e)
+    await update($, paneUp, () => !!(result as any)?.isPlaced)
+    return result
+  }).catch(($, e, next) => next(e))
+  on('ui.close', { id: PANE }, async ($, e, next) => {
+    const result = await next(e)
+    await update($, paneUp, () => false)
+    return result
+  }).catch(($, e, next) => next(e))
+
   on('command.run', { command: 'auto-recommend' }, async $ => {
     await openPane($)
     return { text: 'Auto-recommend pane opened.' }
@@ -37,11 +59,16 @@ export function registerAutoRecommend(on: On) {
     try {
       if ((e.props ?? e).hasSurvey) return below
       const auto = await read($, autoRecommend)
+      const isUp = await read($, paneUp)
       const { Box, Button, Text } = $.ui.resolve(e)
       const button = (
         <Box>
           <Text> </Text>
-          <Button key="auto" label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => void togglePane($)} />
+          {isUp ? (
+            <Button key="auto-clear" label={auto ? '✓ Clear history' : '○ Clear history'} onPress={() => void clearAndClose($)} />
+          ) : (
+            <Button key="auto" label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => openFromBand($)} />
+          )}
         </Box>
       )
       return below ? (
@@ -73,7 +100,7 @@ export function registerAutoRecommend(on: On) {
     const entries = Object.entries(answers).map(([question, answer]) => ({ question, answer }))
     await update($, history, list => [...list, { at, entries }].slice(-200))
     // show the new entry, without taking the keyboard from the prompt
-    await openPane($, false).catch(err => $.ui.toast(`Auto-recommend pane failed to open: ${String(err)}`, { timeoutMs: 20000 }))
+    await openPane($).catch(err => $.ui.toast(`Auto-recommend pane failed to open: ${String(err)}`, { timeoutMs: 20000 }))
     $.ui.toast('Auto-accepted recommended answers')
     return { result: { questions: e.questions, answers } } as any
   }).catch(($, e, next) => next(e))
@@ -86,9 +113,9 @@ export function registerAutoRecommend(on: On) {
     return (
       <Box flexDirection="column">
         <Box>
-          <Button key="toggle" autoFocus label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void update($, autoRecommend, v => !v)} />
+          <Button key="toggle" label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void update($, autoRecommend, v => !v)} />
           <Text> </Text>
-          <Button key="clear" label="clear history" onPress={() => void update($, history, () => [])} />
+          <Button key="clear" label="clear history and close" onPress={() => void clearAndClose($)} />
         </Box>
         <Text> </Text>
         {list.length === 0 && <Text dimColor>No auto answers yet.</Text>}
@@ -97,11 +124,11 @@ export function registerAutoRecommend(on: On) {
             <Text dimColor>{'── '}{item.at}{' ──'}</Text>
             {item.entries.map((x, i) => (
               <Box flexDirection="column" marginTop={i === 0 ? 0 : 1}>
-                <Box>
+                <Box alignItems="flex-start">
                   <Text bold dimColor>Q  </Text>
                   <Box flexShrink={1}><Text bold wrap="wrap">{x.question}</Text></Box>
                 </Box>
-                <Box>
+                <Box alignItems="flex-start">
                   <Text bold color="success">A  </Text>
                   <Box flexShrink={1}><Text color="success" wrap="wrap">{x.answer.replace(/\s*\(recommended\)/gi, '')}</Text></Box>
                 </Box>

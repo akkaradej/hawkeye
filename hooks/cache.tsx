@@ -1,11 +1,21 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
-import { TTL_MS, WARN_MS, clock } from './format'
+import { DEFAULT_WARM_HOURS, HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS, clock } from './format'
 
 const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
+// the last finished turn; pings refresh the cache but do not count as use
+const lastTurnAt = atom({ plugin: 'my-mods', key: 'lastTurnAt' } as const, null)
 const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
 const notified = atom({ plugin: 'my-mods', key: 'notified' } as const, false)
 const isPinging = atom({ plugin: 'my-mods', key: 'isPinging' } as const, false)
+// how long the cache is kept warm after the last turn, and how long before a cache cycle ends the ping goes out
+const warmHours = atom({ plugin: 'my-mods', key: 'cacheWarmHours' } as const, DEFAULT_WARM_HOURS)
+// pings since the last turn: the band counts the cache cycles with it
+const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
+
+export const CACHE_WARM_STORE_KEY = 'cacheWarmHours'
+const SETTINGS_PANE = 'cache-settings'
+const RETRY_MS = 60 * 1000
 
 export const CACHE_COMMANDS = [
   { name: 'cache-ping', description: 'Refresh the prompt cache with a tiny forked request' },
@@ -13,14 +23,32 @@ export const CACHE_COMMANDS = [
 ]
 
 let ticker: Timer | undefined
+let lastAutoTryAt = 0
 
-// warn once when the cache is about to expire; started by the first draw
+// a cache cycle ends TTL_MS after its last hit; the cache is kept warm until warmHours after the last turn
+const cycleEnd = (hit: number) => hit + TTL_MS
+const warmEnd = (turn: number, hours: number) => turn + hours * HOUR_MS
+const needsAnotherPing = (hit: number, turn: number, hours: number) => cycleEnd(hit) < warmEnd(turn, hours)
+
+// each second: auto ping when a cycle is about to end and the warm window runs on; otherwise warn once before expiry
 function startTicker($: EngineInterface) {
   if (ticker) return
   ticker = $.clock.every(1000, async () => {
     const hit = await read($, lastHitAt)
     if (hit === null) return
-    const left = hit + TTL_MS - (await $.clock.now())
+    const t = await $.clock.now()
+    const left = cycleEnd(hit) - t
+    const turn = (await read($, lastTurnAt)) ?? hit
+    const hours = await read($, warmHours)
+    // one ping fewer than the warm hours: a window of N hours is N cycles, and a ping that close to the cycle end would otherwise repeat
+    if (needsAnotherPing(hit, turn, hours) && (await read($, cachePings)) < hours - 1) {
+      const trigger = PING_BEFORE_MIN * MIN_MS
+      if (left > 0 && left <= trigger && t - lastAutoTryAt >= RETRY_MS && !(await read($, isPinging))) {
+        lastAutoTryAt = t
+        await ping($, true)
+      }
+      return // another ping is planned: nothing to warn about
+    }
     if (await read($, notified)) return
     if (left > 0 && left <= WARN_MS) {
       await update($, notified, () => true)
@@ -33,7 +61,8 @@ function startTicker($: EngineInterface) {
   })
 }
 
-async function ping($: EngineInterface): Promise<string> {
+// resetWindow: the ping also starts the warm window over, as if a turn had just finished
+async function ping($: EngineInterface, isAuto = false, resetWindow = false): Promise<string> {
   if (await read($, isPinging)) return 'Ping already running.'
   await update($, isPinging, () => true)
   try {
@@ -41,12 +70,18 @@ async function ping($: EngineInterface): Promise<string> {
     if (r.isAnswered) {
       const t = await $.clock.now()
       await update($, lastHitAt, () => t)
+      if (resetWindow) {
+        await update($, lastTurnAt, () => t)
+        await update($, cachePings, () => 0)
+      } else {
+        await update($, cachePings, n => n + 1)
+      }
       await update($, notified, () => false)
-      const text = `Cache refreshed (${r.usage.cache_read_input_tokens} tokens read, ${r.usage.cache_creation_input_tokens} written, ${r.usage.output_tokens} out)`
-      $.ui.toast(text)
+      const text = `Cache warmed: used ${r.usage.output_tokens} tokens to save ${r.usage.cache_read_input_tokens + r.usage.cache_creation_input_tokens} tokens`
+      $.ui.toast(isAuto ? `Auto ping: ${text}` : text)
       return text
     }
-    $.ui.toast(`Ping failed: ${r.reason}`)
+    $.ui.toast(`${isAuto ? 'Auto ping' : 'Ping'} failed: ${r.reason}`)
     return `Ping failed: ${r.reason}`
   } finally {
     await update($, isPinging, () => false)
@@ -54,37 +89,49 @@ async function ping($: EngineInterface): Promise<string> {
 }
 
 export function registerCache(on: On) {
-  // starts the expiry watch and puts the Ping button at the right of the band once the cache runs low
+  // starts the ping watch; the gear button is drawn by the band, next to the countdown
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     startTicker($)
-    const below = await next(e)
-    try {
-      if ((e.props ?? e).hasSurvey) return below
-      const hit = await read($, lastHitAt)
-      if (hit === null) return below
-      await read($, now) // keeps the 1 s re-render subscription
-      const left = hit + TTL_MS - (await $.clock.now())
-      if (left <= 0 || left > WARN_MS) return below
-      const busy = await read($, isPinging)
-      const { Box, Button, Text } = $.ui.resolve(e)
-      const button = (
-        <Box>
-          <Text> </Text>
-          <Button key="ping" label={busy ? 'Pinging…' : 'Ping'} onPress={() => void ping($)} />
-        </Box>
-      )
-      return below ? (
-        <Box flexGrow={1} alignItems="flex-start">
-          <Box flexGrow={1}>{below}</Box>
-          {button}
-        </Box>
-      ) : (
-        button
-      )
-    } catch {
-      return below
-    }
+    return next(e)
   })
+
+  on('ui.render', { component: 'Pane', requestId: SETTINGS_PANE }, async ($, e) => {
+    const { Box, Button, Select, Text } = $.ui.resolve(e)
+    const hours = await read($, warmHours)
+    const isWarming = await read($, isPinging)
+    let frame = ''
+    if (isWarming) {
+      await read($, now) // keeps the 1 s re-render subscription, so the spinner turns as the Reborn one does
+      frame = SPINNER[Math.floor((await $.clock.now()) / 1000) % SPINNER.length]
+    }
+    const chooseWarm = async (value: number) => {
+      await update($, warmHours, () => value)
+      await $.store.set(CACHE_WARM_STORE_KEY, value).catch(() => undefined)
+    }
+    return (
+      <Box flexDirection="column">
+        <Text bold>Keep cache warm for</Text>
+        <Box marginY={1}>
+          <Select
+            key="warm"
+            options={WARM_HOURS.map(hr => ({ value: String(hr), label: `${hr} hour` }))}
+            value={String(hours)}
+            onSelect={value => void chooseWarm(Number(value))}
+          />
+        </Box>
+        <Text dimColor>Auto ping 10 min before each cycle ends.</Text>
+        <Text> </Text>
+        <Box columnGap={1}>
+          {isWarming ? (
+            <Text color="cyan" bold>{frame} Warming…</Text>
+          ) : (
+            <Button key="warm-now" label="Warm now and restore cycle" onPress={() => void ping($, false, true)} />
+          )}
+          <Button key="close" label="close" onPress={() => void $.ui.close({ id: SETTINGS_PANE })} />
+        </Box>
+      </Box>
+    )
+  }).catch(($, e, next) => next(e))
 
   on('command.run', { command: 'cache-ping' }, async $ => ({ text: await ping($) }))
   .catch(($, e, next) => {
@@ -96,7 +143,7 @@ export function registerCache(on: On) {
   on('command.run', { command: 'cache-status' }, async $ => {
     const hit = await read($, lastHitAt)
     if (hit === null) return { text: 'Cache: no turn finished since the mod loaded.' }
-    const left = hit + TTL_MS - (await $.clock.now())
+    const left = cycleEnd(hit) - (await $.clock.now())
     return { text: left > 0 ? `Cache expires in ${clock(left)}.` : 'Cache expired.' }
   })
   .catch(($, e, next) => {
@@ -109,6 +156,8 @@ export function registerCache(on: On) {
   on('turn.complete', async ($, e, next) => {
     const t = await $.clock.now()
     await update($, lastHitAt, () => t)
+    await update($, lastTurnAt, () => t)
+    await update($, cachePings, () => 0)
     await update($, now, () => t)
     await update($, notified, () => false)
 

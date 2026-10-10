@@ -1,12 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
+import { SPINNER } from './format'
 
 // 'writing' while the handoff is written, 'clearing' while /clear runs, null otherwise
 const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 // ticks every second while Reborn works, to turn the spinner
 const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
-
-const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+// set by the band's button, which cannot call reborn() from its own file; the timer takes the ask
+const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
 
 const PENDING_KEY = 'rebornPending'
 
@@ -114,12 +115,20 @@ async function finish($: EngineInterface) {
   }
 }
 
+// the band's button asked: start the flow
+async function takeAsk($: EngineInterface) {
+  if (!(await read($, rebornAsk))) return
+  await update($, rebornAsk, () => false)
+  await reborn($)
+}
+
 // The timer is started from a draw: one begun inside a request may end with it.
 function startTimer($: EngineInterface) {
   if (timer) return
   timer = $.clock.every(1000, () => {
     void $.clock.now().then(t => update($, now, () => t)).catch(() => undefined)
-    void finish($).catch(() => undefined)
+    // the ask is taken first, so the flow starts on the same tick
+    void takeAsk($).then(() => finish($)).catch(() => undefined)
   })
 }
 
@@ -139,39 +148,9 @@ export function registerReborn(on: On) {
     return { text: message }
   })
 
-  // the button, at the right of the band; a spinner replaces it while it works
+  // the band draws the button next to the context; this starts the timer that runs the flow
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const below = await next(e)
-    try {
-      startTimer($)
-      if ((e.props ?? e).hasSurvey) return below
-      const { Box, Button, Text } = $.ui.resolve(e)
-      const p = await read($, phase)
-      let item
-      if (p) {
-        // reading the tick keeps the 1 s re-render subscription, so the spinner turns meanwhile
-        await read($, now)
-        const frame = SPINNER[Math.floor((await $.clock.now()) / 1000) % SPINNER.length]
-        item = <Text color="cyan" bold>{frame} {p === 'writing' ? 'Reborning…' : 'Clearing…'}</Text>
-      } else {
-        item = <Button key="band-all" label="☀ Reborn" onPress={() => void reborn($)} />
-      }
-      const button = (
-        <Box>
-          <Text> </Text>
-          {item}
-        </Box>
-      )
-      return below ? (
-        <Box alignItems="flex-start">
-          <Box flexGrow={1}>{below}</Box>
-          {button}
-        </Box>
-      ) : (
-        button
-      )
-    } catch {
-      return below
-    }
+    startTimer($)
+    return next(e)
   })
 }

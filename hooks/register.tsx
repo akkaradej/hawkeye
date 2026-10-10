@@ -3,7 +3,8 @@ import type { Register } from 'claude-code'
 import { AUTO_RECOMMEND_COMMANDS, registerAutoRecommend } from './auto-recommend'
 import { AGENTS_BAND_STORE_KEY, AGENTS_COMMANDS, registerAgents } from './agents'
 import { registerBand } from './band'
-import { CACHE_COMMANDS, registerCache } from './cache'
+import { CACHE_COMMANDS, CACHE_WARM_STORE_KEY, registerCache } from './cache'
+import { DEFAULT_WARM_HOURS, WARM_HOURS } from './format'
 import { REBORN_COMMANDS, registerReborn } from './reborn'
 import { registerUsage } from './usage'
 
@@ -12,6 +13,7 @@ const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 const autoHistory = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 const agentsBandOn = atom({ plugin: 'my-mods', key: 'agentsBandEnabled' } as const, true)
 const autoRecommend = atom({ plugin: 'my-mods', key: 'autoRecommend' } as const, true)
+const warmHours = atom({ plugin: 'my-mods', key: 'cacheWarmHours' } as const, DEFAULT_WARM_HOURS)
 
 // Cache countdown: each feature registers its own hooks from its own file. A plugin has one
 // session.start, so the features' commands are registered from it. Only `on` crosses a file;
@@ -26,6 +28,10 @@ export const register: Register = on => {
     for (const command of [...CACHE_COMMANDS, ...REBORN_COMMANDS, ...AUTO_RECOMMEND_COMMANDS, ...AGENTS_COMMANDS]) {
       await $.command.register(command)
     }
+
+    // the auto ping setting outlives the session
+    const warm = await $.store.get(CACHE_WARM_STORE_KEY)
+    if (typeof warm === 'number' && WARM_HOURS.includes(warm)) await update($, warmHours, () => warm)
 
     const showAgents = await $.store.get(AGENTS_BAND_STORE_KEY)
     if (typeof showAgents === 'boolean') await update($, agentsBandOn, () => showAgents)

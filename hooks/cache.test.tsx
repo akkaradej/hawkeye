@@ -49,7 +49,7 @@ test('/cache-ping forks a request and reports the usage', async ($, on) => {
   answered(on, calls)
   const r = await run($, 'cache-ping')
   expect(calls.n).toBe(1)
-  expect(r.text).toContain('Cache refreshed (10 tokens read, 2 written, 1 out)')
+  expect(r.text).toContain('Cache warmed: used 1 tokens to save 12 tokens')
 })
 
 test('/cache-ping restarts the countdown', async ($, on) => {
@@ -71,37 +71,89 @@ test('/cache-ping reports a failed fork', async ($, on) => {
 // the band's 1 s tickers start with the first draw, so the long waits come before it
 const mount = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
 
-test('no Ping button while the cache is fresh', async ($, on) => {
+// the settings pane, as the person opens it; press its buttons by key
+const settings = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'cache-settings', props: {} as any })
+
+test('the band has a settings button and no manual Ping button', async ($, on) => {
   mock.clock(on, { now: 1000 })
   emptyBand(on)
   await finishTurn($, on)
-  expect(await (await mount($)).find({ key: 'ping' })).toBeUndefined()
-})
-
-test('the Ping button appears in the last 5 minutes and goes once the cache expires', async ($, on) => {
-  const clock = mock.clock(on, { now: 1000 })
-  emptyBand(on)
-  quiet(on)
-  on('tool.call', async () => ({ result: 'ok' }) as any)
-  await finishTurn($, on)
-  await clock.advance(HOUR - 4 * MIN)
   const ui = await mount($)
-  expect(await ui.find({ key: 'ping' })).toBeDefined()
-  await clock.advance(5 * MIN)
-  expect(await (await mount($)).find({ key: 'ping' })).toBeUndefined()
+  expect(await ui.find({ key: 'cache-settings' })).toBeDefined()
+  expect(await ui.find({ key: 'ping' })).toBeUndefined()
 })
 
-test('pressing Ping refreshes the cache', async ($, on) => {
+test('the settings pane offers an hours dropdown and says auto ping is 10 min before', async ($, on) => {
+  mock.clock(on)
+  on('store.set', async () => ({ value: undefined }) as any)
+  const ui = await settings($)
+  expect(await ui.find({ key: 'warm' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Auto ping 10 min before/ })).toBeDefined()
+})
+
+test('with the default 1 hour the cache is not pinged', async ($, on) => {
   const clock = mock.clock(on, { now: 1000 })
   const calls = { n: 0 }
   answered(on, calls)
   emptyBand(on)
+  on('tool.call', async () => ({ result: 'ok' }) as any)
   await finishTurn($, on)
-  await clock.advance(HOUR - 4 * MIN)
-  const ui = await mount($)
-  await ui.press({ key: 'ping' })
+  await advanceBy(clock, HOUR - 12 * MIN)
+  await mount($) // the first draw starts the watch
+  await advanceBy(clock, 11 * MIN)
+  expect(calls.n).toBe(0)
+})
+
+test('with 2 hours the cache is pinged 10 minutes before each cycle ends', async ($, on) => {
+  const clock = mock.clock(on, { now: 1000 })
+  const calls = { n: 0 }
+  answered(on, calls)
+  emptyBand(on)
+  on('store.set', async () => ({ value: undefined }) as any)
+  on('tool.call', async () => ({ result: 'ok' }) as any)
+  on('turn.complete', async () => ({ text: '' }) as any)
+  await (await settings($)).select({ key: 'warm', value: '2' })
+  await $.turn.complete(TURN)
+  await advanceBy(clock, 45 * MIN)
+  await mount($)
+  await clock.advance(4 * MIN)
+  expect(calls.n).toBe(0) // 11 min left of the cycle
+  await clock.advance(2 * MIN)
+  expect(calls.n).toBe(1) // inside the last 10 minutes
+  expect((await run($, 'cache-status')).text).toContain('Cache expires in 59:')
+})
+
+test('auto pings stop once the warm window is covered', async ($, on) => {
+  const clock = mock.clock(on, { now: 1000 })
+  const calls = { n: 0 }
+  answered(on, calls)
+  emptyBand(on)
+  on('store.set', async () => ({ value: undefined }) as any)
+  on('tool.call', async () => ({ result: 'ok' }) as any)
+  on('turn.complete', async () => ({ text: '' }) as any)
+  await (await settings($)).select({ key: 'warm', value: '2' })
+  await $.turn.complete(TURN)
+  await advanceBy(clock, 45 * MIN)
+  await mount($)
+  await advanceBy(clock, 70 * MIN)
+  expect(calls.n).toBe(1) // 50 min after the turn: that is the cap for 2 hours, so no ping at 1 h 40
+  expect((await run($, 'cache-status')).text).toBe('Cache expired.')
+})
+
+test('Warm now in the settings warms the cache', async ($, on) => {
+  const clock = mock.clock(on, { now: 1000 })
+  const calls = { n: 0 }
+  answered(on, calls)
+  emptyBand(on)
+  on('store.set', async () => ({ value: undefined }) as any)
+  on('tool.call', async () => ({ result: 'ok' }) as any)
+  on('turn.complete', async () => ({ text: '' }) as any)
+  const pane = await settings($)
+  await $.turn.complete(TURN)
+  await advanceBy(clock, 30 * MIN)
+  await pane.press({ key: 'warm-now' })
   expect(calls.n).toBe(1)
-  expect((await run($, 'cache-status')).text).toBe('Cache expires in 60:00.')
+  expect((await run($, 'cache-status')).text).toContain('Cache expires in 60:')
 })
 
 // advance in steps: each tick is a wait, and one advance resolves at most 10000 of them
