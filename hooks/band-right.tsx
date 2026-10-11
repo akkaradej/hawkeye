@@ -14,6 +14,8 @@ const judging = atom({ plugin: 'my-mods', key: 'judging' } as const, false)
 const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
+// below this many columns the band is two rows
+const NARROW_COLUMNS = 100
 
 // Auto as a switch, as in effortless: a pill with its knob right and violet when on, left and grey when off.
 // Right after a flip the image carries a slide (knob and colour move over SLIDE_MS) instead of jumping.
@@ -125,8 +127,10 @@ export function registerBandRight(on: On) {
           <Text dimColor> {effortText}</Text>
         </Box>
       )
+      // a narrow screen stacks the band: Auto on one row, Recommend and its icon on the next
+      const narrow = (e.viewport?.columns ?? Infinity) < NARROW_COLUMNS
       const rightBand = (
-        <Box key="right-band" flexShrink={0} flexDirection="row" alignItems="center" gap={2} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
+        <Box key="right-band" flexShrink={0} flexDirection={narrow ? 'column' : 'row'} alignItems={narrow ? 'flex-start' : 'center'} gap={narrow ? 1 : 2} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
           {effortItem}
           {/* Recommend and its history icon sit together, closer than the band's gap between items */}
           <Box key="right-recommend-group" flexDirection="row" alignItems="center">
