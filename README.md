@@ -11,7 +11,7 @@ A Claude Code mod that adds bands above the prompt and keeps an eye on your sess
 - **Reborn**: writes a handoff of the current session (goal, git state and so on), clears, and continues in a fresh session. The button appears once the context passes a set percent.
 - **Auto effort**: Haiku reads each message and picks the reasoning effort for it, between a lowest and highest you choose. The model is never switched.
 - **Auto-recommend**: answers `AskUserQuestion` prompts with the recommended options, with a pane showing the history.
-- **Suggest**: next-step suggestions.
+- **Suggest**: a switch for the [next-steps](https://github.com/anthropics/claude-plugins-community/blob/main/next-steps) plugin's suggestions. It has no switch of its own, so Hawkeye toggles its "Shortest answer to suggest after" setting. The switch shows only while next-steps is enabled.
 
 ## Commands
 
