@@ -14,16 +14,6 @@ const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
 const percent = atom({ plugin: 'my-mods', key: 'percent' } as const, null)
 const limits = atom({ plugin: 'my-mods', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
-// the gear drawn as an outline cog: eight teeth round a hub, 14 px, the colour of the dim text
-function cogSvg(color: string) {
-  const pts: string[] = []
-  for (let i = 0; i < 8; i++) {
-    const a = (i * Math.PI) / 4
-    const at = (f: number, r: number) => `${(7 + r * Math.cos(a + f * Math.PI / 4)).toFixed(2)},${(7 + r * Math.sin(a + f * Math.PI / 4)).toFixed(2)}`
-    pts.push(at(-0.42, 4.6), at(-0.27, 4.6), at(-0.2, 6.1), at(0.2, 6.1), at(0.27, 4.6), at(0.42, 4.6))
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><g fill="none" stroke="${color}" stroke-width="1.3" stroke-linejoin="round" shape-rendering="geometricPrecision"><path d="M${pts.join('L')}Z"/><circle cx="7" cy="7" r="2"/></g></svg>`
-}
 // the context as a ring: a faint track with the used share drawn over it, in the forecast's colour
 function ringSvg(percent: number, color: string, spin = false) {
   const p = Math.max(0, Math.min(100, percent))
@@ -40,14 +30,7 @@ const FORECAST = [
   { upTo: Infinity, icon: '↯', word: 'Compact soon', color: 'red', hex: '#f87171' },
 ] as const
 
-// the gear button: open the cache settings pane (drawn by cache.tsx), or close it when it is already up
-async function toggleSettings($: EngineInterface) {
-  const isUp = (await $.ui.panes()).some(pane => pane.id === 'settings')
-  if (isUp) await $.ui.close({ id: 'settings' })
-  else await $.ui.open({ id: 'settings', title: 'Settings', focus: true, closeOnEscape: true })
-}
-
-// the left band: the cache countdown, the context and Reborn, the usage numbers and the gear
+// the left band: the cache countdown, the context and Reborn, and the usage numbers
 async function leftBand($: EngineInterface, e: any) {
   const hit = await read($, lastHitAt)
   const els = $.ui.resolve(e)
@@ -127,7 +110,7 @@ async function leftBand($: EngineInterface, e: any) {
       {lim.sevenDay !== null && <Text {...limitStyle(lim.sevenDay)}>7d {Math.round(lim.sevenDay)}%</Text>}
     </Text>
   )
-  // the band is one rounded card: cache on the left, context and Reborn in the middle, usage and the gear pushed right
+  // the band is one rounded card: cache on the left, context and Reborn in the middle, usage pushed right
   const card = (cache: any) => (
     <Box key="left-band" position="relative" overflow="hidden" flexGrow={1} flexDirection="row" alignItems="center" gap={2} paddingX={1} borderStyle="round" borderColor={working ? CARD_BG : BAND_EDGE} backgroundColor={working ? CARD_BG : BAND_BG}>
       {working && Svg && (
@@ -139,21 +122,7 @@ async function leftBand($: EngineInterface, e: any) {
       <Box key="band-context" position="relative">{context}</Box>
       <Box key="band-spacer" flexGrow={1} />
       <Box key="band-usage" position="relative">{usage}</Box>
-      <Box key="band-gear" position="relative">{gear}</Box>
     </Box>
-  )
-  // drawn on the desktop with a blank button laid over it to take the click. The blank is no-break spaces, as in
-  // effortless: plain spaces can be trimmed, which left the hover box narrower than the icon.
-  //  the terminal keeps the ⚙ glyph
-  const gear = Svg ? (
-    <Box key="cache-settings-icon" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
-      <Svg source={cogSvg('#a1a1aa')} alt="Cache settings" width={14} height={14} />
-      <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
-        <Button key="cache-settings" label={'\u00a0'.repeat(3)} plain onPress={() => void toggleSettings($)} />
-      </Box>
-    </Box>
-  ) : (
-    <Button key="cache-settings" label=" ⚙ " plain dimColor onPress={() => void toggleSettings($)} />
   )
   const line = (cache: any) => card(cache)
   const cacheItem = (text: any) => text

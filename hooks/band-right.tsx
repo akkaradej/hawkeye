@@ -6,6 +6,23 @@ import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 // the right band: the auto features in one card beside the left band, in the same look. The Auto effort switch with
 // the effort and model in use, then the Auto-recommend button (which opens its pane, or clears it while it is up).
 // The values are in ./settings and the pane's logic in ./auto-recommend; the atoms here are the ones they keep.
+// the gear drawn as an outline cog: eight teeth round a hub, 14 px, the colour of the dim text
+function cogSvg(color: string) {
+  const pts: string[] = []
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4
+    const at = (f: number, r: number) => `${(7 + r * Math.cos(a + f * Math.PI / 4)).toFixed(2)},${(7 + r * Math.sin(a + f * Math.PI / 4)).toFixed(2)}`
+    pts.push(at(-0.42, 4.6), at(-0.27, 4.6), at(-0.2, 6.1), at(0.2, 6.1), at(0.27, 4.6), at(0.42, 4.6))
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><g fill="none" stroke="${color}" stroke-width="1.3" stroke-linejoin="round" shape-rendering="geometricPrecision"><path d="M${pts.join('L')}Z"/><circle cx="7" cy="7" r="2"/></g></svg>`
+}
+// the gear button: open the cache settings pane (drawn by cache.tsx), or close it when it is already up
+async function toggleSettings($: EngineInterface) {
+  const isUp = (await $.ui.panes()).some(pane => pane.id === 'settings')
+  if (isUp) await $.ui.close({ id: 'settings' })
+  else await $.ui.open({ id: 'settings', title: 'Settings', focus: true, closeOnEscape: true })
+}
+
 const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
 const effortPick = atom({ plugin: 'my-mods', key: 'effortPick' } as const, null)
 const appEffort = atom({ plugin: 'my-mods', key: 'appEffort' } as const, null)
@@ -126,7 +143,7 @@ export function registerBandRight(on: On) {
       if (nextSeen !== undefined && nextSeen !== nextOn) nextFlipAt = nowMs
       nextSeen = nextOn
       const nextItem = Svg ? (
-        <Box key="right-next" flexDirection="row" alignItems="center" marginLeft={1}>
+        <Box key="right-next" flexDirection="row" alignItems="center">
           <Box key="next-switch" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={-1}>
             <Svg source={switchSvg(nextOn, nowMs - nextFlipAt)} alt={nextOn ? 'Next steps on' : 'Next steps off'} width={26} height={15} />
             <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
@@ -169,15 +186,26 @@ export function registerBandRight(on: On) {
           <Text dimColor> {effortText}</Text>
         </Box>
       )
-      // a narrow screen stacks the band: Auto on one row, Recommend and its icon on the next
+      // a narrow screen stacks the band: Next steps and Auto on the first rows, Recommend and its icon on the last
       const narrow = (e.viewport?.columns ?? Infinity) < NARROW_COLUMNS
+      // the gear: opens the cache settings pane. A blank button over the drawn cog (the pattern of the history icon); the terminal keeps the ⚙ glyph
+      const gear = Svg ? (
+        <Box key="cache-settings-icon" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
+          <Svg source={cogSvg('#a1a1aa')} alt="Cache settings" width={14} height={14} />
+          <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
+            <Button key="cache-settings" label={'\u00a0'.repeat(3)} plain onPress={() => void toggleSettings($)} />
+          </Box>
+        </Box>
+      ) : (
+        <Button key="cache-settings" label=" ⚙ " plain dimColor onPress={() => void toggleSettings($)} />
+      )
       const rightBand = (
-        <Box key="right-band" flexShrink={0} flexDirection={narrow ? 'column' : 'row'} alignItems={narrow ? 'flex-start' : 'center'} gap={narrow ? 1 : 2} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
+        <Box key="right-band" flexShrink={0} flexDirection={narrow ? 'column' : 'row'} alignItems={narrow ? 'flex-start' : 'center'} gap={narrow ? 1 : 0} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
+          {nextItem}
           {effortItem}
           {/* Recommend and its history icon sit together, closer than the band's gap between items */}
           <Box key="right-recommend-group" flexDirection="row" alignItems="center">
             {recommendItem}
-            {nextItem}
             {/* the pane's button as an icon with a blank button over it (the cog's pattern): a trash can to clear the history while the pane is up, else an open-link to open it */}
             {Svg ? (
               <Box key="right-pane" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
@@ -192,6 +220,7 @@ export function registerBandRight(on: On) {
               <Button key="auto" plain label="History" onPress={() => void openPane($)} />
             )}
           </Box>
+          {gear}
         </Box>
       )
       return below ? (
