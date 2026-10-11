@@ -41,7 +41,7 @@ const NEXT_STEPS_ROW = 'next-steps.minAnswerChars'
 const NEXT_STEPS_ON = 80
 const NEXT_STEPS_OFF = 1000000
 let nextStepsInstalled = false
-let nextStepsChecked = false
+let nextStepsCheckedAt = -Infinity
 let nextSeen: boolean | undefined
 let nextFlipAt = 0
 
@@ -113,8 +113,9 @@ export function registerBandRight(on: On) {
           await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
         } catch {}
       }
-      if (!nextStepsChecked) {
-        nextStepsChecked = true
+      // a new session may list the config rows later than the first draw: keep looking until the row shows up
+      if (!nextStepsInstalled && nowMs - nextStepsCheckedAt > 3000) {
+        nextStepsCheckedAt = nowMs
         try {
           nextStepsInstalled = (await $.config.list()).some(r => r.key === NEXT_STEPS_ROW)
           // a reload or a new session starts the plugin at its own default: bring it to the saved state
@@ -124,7 +125,7 @@ export function registerBandRight(on: On) {
       const nextOn = settings.nextSteps
       if (nextSeen !== undefined && nextSeen !== nextOn) nextFlipAt = nowMs
       nextSeen = nextOn
-      const nextItem = !nextStepsInstalled ? null : Svg ? (
+      const nextItem = Svg ? (
         <Box key="right-next" flexDirection="row" alignItems="center" marginLeft={1}>
           <Box key="next-switch" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={-1}>
             <Svg source={switchSvg(nextOn, nowMs - nextFlipAt)} alt={nextOn ? 'Next steps on' : 'Next steps off'} width={26} height={15} />
