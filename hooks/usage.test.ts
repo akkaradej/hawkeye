@@ -24,3 +24,16 @@ test('a usage failure does not break the turn', async ($, on) => {
   const r = await $.turn.complete(TURN)
   expect(r.text).toBe('done')
 })
+
+test('the 5h and 7d limits go to the status line', async ($, on) => {
+  mock.clock(on)
+  const lines: any[] = []
+  on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 12.4 }, { kind: 'seven_day', percentUsed: 51 }] } }) as any)
+  on('ui.status', async (_$, e) => {
+    lines.push(e.text)
+    return {} as any
+  })
+  on('turn.complete', async () => ({ text: '' }) as any)
+  await $.turn.complete(TURN)
+  expect(lines).toContain('5h 12% · 7d 51%')
+})

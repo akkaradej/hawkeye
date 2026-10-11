@@ -8,7 +8,12 @@ async function takeReading($: EngineInterface) {
   try {
     const { context, rateLimits } = await $.session.usage()
     const pick = (kind: string) => rateLimits?.find(r => r.kind === kind)?.percentUsed ?? null
-    await update($, limits, () => ({ fiveHour: pick('five_hour'), sevenDay: pick('seven_day') }))
+    const fiveHour = pick('five_hour')
+    const sevenDay = pick('seven_day')
+    await update($, limits, () => ({ fiveHour, sevenDay }))
+    // the 5h and 7d limits live in the status line under the prompt (plain text: it has no colours)
+    const parts = [fiveHour !== null && `5h ${Math.round(fiveHour)}%`, sevenDay !== null && `7d ${Math.round(sevenDay)}%`].filter(Boolean)
+    $.ui.status(parts.length ? parts.join(' · ') : undefined)
     if (!context || !context.window) return
     const tokens = context.tokens ?? 0
     if (tokens > 0) await update($, percent, () => Math.round(context.percent ?? (tokens / context.window) * 100))

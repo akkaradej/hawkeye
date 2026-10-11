@@ -16,15 +16,14 @@ function world(on: any, usage: any) {
 }
 const mount = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
 
-test('the band shows the cache countdown, the context forecast and the 5h/7d usage', async ($, on) => {
+test('the band shows the cache countdown, the context forecast', async ($, on) => {
   mock.clock(on, { now: 1000 })
   world(on, { context: { tokens: 60, window: 100 }, rateLimits: [{ kind: 'five_hour', percentUsed: 95 }, { kind: 'seven_day', percentUsed: 40 }] })
   await $.turn.complete(TURN)
   const ui = await mount($)
   expect(await ui.find({ type: 'Text', text: /Cache 60m/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /60%/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /5h 95%/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /7d 40%/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /5h/ })).toBeUndefined()
 })
 
 test('the countdown reads expired once the cache runs out', async ($, on) => {

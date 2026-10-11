@@ -13,7 +13,6 @@ const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
 const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
 const percent = atom({ plugin: 'my-mods', key: 'percent' } as const, null)
-const limits = atom({ plugin: 'my-mods', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
 // the context as a ring: a faint track with the used share drawn over it, in the forecast's colour
 function ringSvg(percent: number, color: string, spin = false) {
   const p = Math.max(0, Math.min(100, percent))
@@ -30,7 +29,7 @@ const FORECAST = [
   { upTo: Infinity, icon: '↯', word: 'Compact soon', color: 'red', hex: '#f87171' },
 ] as const
 
-// the left band: the cache countdown, the context and Reborn, and the usage numbers
+// the left band: the cache countdown, the context and Reborn
 async function leftBand($: EngineInterface, e: any) {
   const hit = await read($, lastHitAt)
   const els = $.ui.resolve(e)
@@ -101,16 +100,7 @@ async function leftBand($: EngineInterface, e: any) {
   // while Reborn works the band card itself takes the handoff look: warm ground and the hawks flying behind its
   // content (desktop only)
   const working = !!p
-  const lim = await read($, limits)
-  const limitStyle = (p: number) => (p >= 90 ? { color: 'red' } : p >= 70 ? { color: 'yellow' } : { dimColor: true })
-  const usage = (lim.fiveHour !== null || lim.sevenDay !== null) && (
-    <Text>
-      {lim.fiveHour !== null && <Text {...limitStyle(lim.fiveHour)}>5h {Math.round(lim.fiveHour)}%</Text>}
-      {lim.fiveHour !== null && lim.sevenDay !== null && <Text dimColor> · </Text>}
-      {lim.sevenDay !== null && <Text {...limitStyle(lim.sevenDay)}>7d {Math.round(lim.sevenDay)}%</Text>}
-    </Text>
-  )
-  // the band is one rounded card: cache on the left, context and Reborn in the middle, usage pushed right
+  // the band is one rounded card: cache on the left, context and Reborn in the middle
   const card = (cache: any) => (
     <Box key="left-band" position="relative" overflow="hidden" flexGrow={1} flexDirection="row" alignItems="center" gap={2} paddingX={1} borderStyle="round" borderColor={working ? CARD_BG : BAND_EDGE} backgroundColor={working ? CARD_BG : BAND_BG}>
       {working && Svg && (
@@ -121,7 +111,6 @@ async function leftBand($: EngineInterface, e: any) {
       <Box key="band-cache" position="relative">{cache}</Box>
       <Box key="band-context" position="relative">{context}</Box>
       <Box key="band-spacer" flexGrow={1} />
-      <Box key="band-usage" position="relative">{usage}</Box>
     </Box>
   )
   const line = (cache: any) => card(cache)

@@ -208,7 +208,7 @@ export function registerBandRight(on: On) {
             {recommendItem}
             {/* the pane's button as an icon with a blank button over it (the cog's pattern): a trash can to clear the history while the pane is up, else an open-link to open it */}
             {Svg ? (
-              <Box key="right-pane" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
+              <Box key="right-pane" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginLeft={-1}>
                 <Svg source={isUp ? (hasHistory ? trashSvg('#a1a1aa') : closeSvg('#a1a1aa')) : linkSvg('#a1a1aa')} alt={isUp ? (hasHistory ? 'Clear history' : 'Close history') : 'Open history'} width={14} height={14} />
                 <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
                   <Button key={isUp ? 'auto-clear' : 'auto'} plain label={'\u00a0'.repeat(3)} onPress={() => void (isUp ? (hasHistory ? clearAndClose($) : closePane($)) : openPane($))} />
