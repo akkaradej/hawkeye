@@ -36,3 +36,7 @@ types/index.d.ts             types for the mod API
 ## Development
 
 Tests sit next to the modules in `hooks/`. The mod is loaded through Claude Code's plugin system using `.claude-plugin/plugin.json`.
+
+## License
+
+[MIT](LICENSE). Auto effort is adapted from [effortless](https://github.com/HeyCubit/effortless), also MIT, Copyright (c) 2026 HeyCubit.
