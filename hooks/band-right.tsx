@@ -34,9 +34,25 @@ let autoFlipAt = 0
 let recSeen: boolean | undefined
 let recFlipAt = 0
 
+// outline icons, 14 px, the colour of the dim text: an open-link (a box with an arrow out of its corner) and a trash can
+function linkSvg(color: string) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><g fill="none" stroke="${color}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 7.8V11a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1h3.2"/><path d="M8.2 2H12v3.8M12 2L6.3 7.7"/></g></svg>`
+}
+function trashSvg(color: string) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><g fill="none" stroke="${color}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 3.8h9.6M5.3 3.8V2.4h3.4v1.4M3.5 3.8l.5 7.6a1 1 0 0 0 1 .9h4a1 1 0 0 0 1-.9l.5-7.6M5.8 6.2v3.6M8.2 6.2v3.6"/></g></svg>`
+}
+
+function closeSvg(color: string) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round"/></svg>`
+}
+
 async function openPane($: EngineInterface) {
   const result = await $.ui.open({ id: PANE, title: 'Auto-recommend' })
   await update($, paneUp, () => !!(result as any)?.isPlaced)
+}
+async function closePane($: EngineInterface) {
+  await $.ui.close({ id: PANE })
+  await update($, paneUp, () => false)
 }
 async function clearAndClose($: EngineInterface) {
   await update($, history, () => [])
@@ -52,6 +68,8 @@ export function registerBandRight(on: On) {
       await read($, settingsPing)
       const auto = settings.autoRecommend
       const isUp = await read($, paneUp)
+      // nothing to clear: the pane's button just closes it
+      const hasHistory = ((await read($, history)) as unknown[]).length > 0
       const els = $.ui.resolve(e)
       const { Box, Button, Text } = els
       const Svg = e.surface !== 'terminal' && 'Svg' in els ? (els as any).Svg : null
@@ -65,7 +83,7 @@ export function registerBandRight(on: On) {
       const modelId = await read($, sessionModel)
       const effort = autoOn && pickedEffort ? pickedEffort : await read($, appEffort)
       const model = modelId ? (modelId.match(/haiku|sonnet|opus|fable/)?.[0] ?? modelId) : null
-      const effortText = (await read($, judging)) ? 'judging…' : [effort && String(effort).replace(/^./, c => c.toUpperCase()), model].filter(Boolean).join(' · ')
+      const effortText = (await read($, judging)) ? 'judging…' : [effort, model].filter(Boolean).map(w => String(w).replace(/^./, c => c.toUpperCase())).join(' · ')
       const toggleEffort = async () => {
         const all = setSetting('autoEffort', !settings.autoEffort)
         await update($, settingsPing, p => !p)
@@ -84,7 +102,7 @@ export function registerBandRight(on: On) {
               <Button key="recommend-pill" plain hover={{ backgroundColor: 'rgba(20,20,22,0)' }} label={'\u00a0'.repeat(6)} onPress={() => void toggleRecommend()} />
             </Box>
           </Box>
-          <Button key="recommend-text" plain hover={{ backgroundColor: BAND_BG }} label="Recommend" onPress={() => void toggleRecommend()} />
+          <Button key="recommend-text" plain dimColor hover={{ backgroundColor: BAND_BG }} label="Recommend" onPress={() => void toggleRecommend()} />
         </Box>
       ) : (
         <Button key="recommend-text" plain dimColor={!auto} color={auto ? 'green' : undefined} label={auto ? 'Recommend on' : 'Recommend off'} onPress={() => void toggleRecommend()} />
@@ -110,12 +128,23 @@ export function registerBandRight(on: On) {
       const rightBand = (
         <Box key="right-band" flexShrink={0} flexDirection="row" alignItems="center" gap={2} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
           {effortItem}
-          {recommendItem}
-          {isUp ? (
-            <Button key="auto-clear" plain label="Clear history" onPress={() => void clearAndClose($)} />
-          ) : (
-            <Button key="auto" plain label="History" onPress={() => void openPane($)} />
-          )}
+          {/* Recommend and its history icon sit together, closer than the band's gap between items */}
+          <Box key="right-recommend-group" flexDirection="row" alignItems="center">
+            {recommendItem}
+            {/* the pane's button as an icon with a blank button over it (the cog's pattern): a trash can to clear the history while the pane is up, else an open-link to open it */}
+            {Svg ? (
+              <Box key="right-pane" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
+                <Svg source={isUp ? (hasHistory ? trashSvg('#a1a1aa') : closeSvg('#a1a1aa')) : linkSvg('#a1a1aa')} alt={isUp ? (hasHistory ? 'Clear history' : 'Close history') : 'Open history'} width={14} height={14} />
+                <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
+                  <Button key={isUp ? 'auto-clear' : 'auto'} plain label={'\u00a0'.repeat(3)} onPress={() => void (isUp ? (hasHistory ? clearAndClose($) : closePane($)) : openPane($))} />
+                </Box>
+              </Box>
+            ) : isUp ? (
+              <Button key="auto-clear" plain label={hasHistory ? 'Clear history' : 'Close'} onPress={() => void (hasHistory ? clearAndClose($) : closePane($))} />
+            ) : (
+              <Button key="auto" plain label="History" onPress={() => void openPane($)} />
+            )}
+          </Box>
         </Box>
       )
       return below ? (

@@ -1,17 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
-import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
+import { settings } from './settings'
 
 // auto-answer AskUserQuestion with the recommended options; on by default, the setting is kept across /clear
-// the value is in ./settings; this atom only redraws
-const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
-async function toggleAuto($: EngineInterface) {
-  const next = !settings.autoRecommend
-  const all = setSetting('autoRecommend', next)
-  await update($, settingsPing, p => !p)
-  await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
-}
-// what was auto-answered; reset at session start, or by the pane's clear button
+// the value is in ./settings and the band's switch toggles it
+// what was auto-answered; reset at session start, or by the band's clear button
 const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 // whether the pane is drawn now, so the band button can offer to clear it
 const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
@@ -26,13 +19,6 @@ async function openPane($: EngineInterface) {
   const result = await $.ui.open({ id: PANE, title: 'Auto-recommend' })
   await update($, paneUp, () => !!(result as any)?.isPlaced)
   return result
-}
-
-// empty the history and close the pane: the pane's clear button, and the band's while the pane is up
-async function clearAndClose($: EngineInterface) {
-  await update($, history, () => [])
-  await $.ui.close({ id: PANE })
-  await update($, paneUp, () => false)
 }
 
 export function registerAutoRecommend(on: On) {
@@ -80,19 +66,11 @@ export function registerAutoRecommend(on: On) {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Text } = $.ui.resolve(e)
-    await read($, settingsPing)
-    const auto = settings.autoRecommend
+    const { Box, Text } = $.ui.resolve(e)
     const list = await read($, history)
     const room = Math.max(1, Math.floor(((e.viewport?.rows ?? 24) - 6) / 4))
     return (
       <Box flexDirection="column">
-        <Box>
-          <Button key="toggle" label={auto ? '✓ Auto-recommend: on' : '○ Auto-recommend: off'} onPress={() => void toggleAuto($)} />
-          <Text> </Text>
-          <Button key="clear" label="clear history and close" onPress={() => void clearAndClose($)} />
-        </Box>
-        <Text> </Text>
         {list.length === 0 && <Text dimColor>No auto answers yet.</Text>}
         {list.slice(-room).reverse().map(item => (
           <Box flexDirection="column" marginBottom={1}>
