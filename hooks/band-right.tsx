@@ -53,7 +53,7 @@ let autoFlipAt = 0
 let recSeen: boolean | undefined
 let recFlipAt = 0
 // The next-steps plugin has no switch of its own; its "Shortest answer to suggest after" row can act as one.
-// The pill shows only when that row exists, looked up once per load.
+// The toggle shows only while that row exists (the plugin is enabled), looked up every few seconds.
 const NEXT_STEPS_ROW = 'next-steps.minAnswerChars'
 const NEXT_STEPS_ON = 80
 const NEXT_STEPS_OFF = 1000000
@@ -130,13 +130,15 @@ export function registerBandRight(on: On) {
           await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
         } catch {}
       }
-      // a new session may list the config rows later than the first draw: keep looking until the row shows up
-      if (!nextStepsInstalled && nowMs - nextStepsCheckedAt > 3000) {
+      // a new session may list the config rows later than the first draw, and the plugin can be enabled or disabled
+      // at any time: keep looking, so the toggle follows the plugin
+      if (nowMs - nextStepsCheckedAt > 3000) {
         nextStepsCheckedAt = nowMs
         try {
+          const wasInstalled = nextStepsInstalled
           nextStepsInstalled = (await $.config.list()).some(r => r.key === NEXT_STEPS_ROW)
           // a reload or a new session starts the plugin at its own default: bring it to the saved state
-          if (nextStepsInstalled) await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
+          if (nextStepsInstalled && !wasInstalled) await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
         } catch {}
       }
       const nextOn = settings.nextSteps
@@ -205,7 +207,7 @@ export function registerBandRight(on: On) {
       )
       const rightBand = (
         <Box key="right-band" flexShrink={0} flexDirection={narrow ? 'column' : 'row'} alignItems={narrow ? 'flex-start' : 'center'} gap={narrow ? 1 : 0} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
-          {nextItem}
+          {nextStepsInstalled && nextItem}
           {effortItem}
           {/* Recommend and its history icon sit together, closer than the band's gap between items */}
           <Box key="right-recommend-group" flexDirection="row" alignItems="center">
