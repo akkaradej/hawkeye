@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
-import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
+import { REBORN_PCTS, SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 import { HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS, clock } from './format'
 
 const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
@@ -111,8 +111,22 @@ export function registerCache(on: On) {
       await update($, settingsPing, p => !p)
       await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
     }
+    const chooseReborn = async (value: number) => {
+      const all = setSetting('rebornFromPct', value)
+      await update($, settingsPing, p => !p)
+      await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
+    }
     return (
       <Box flexDirection="column">
+        <Text bold>Suggest Reborn from context</Text>
+        <Box marginY={1}>
+          <Select
+            key="reborn-at"
+            options={REBORN_PCTS.map(pct => ({ value: String(pct), label: pct === 0 ? 'always' : `${pct}%` }))}
+            value={String(settings.rebornFromPct)}
+            onSelect={value => void chooseReborn(Number(value))}
+          />
+        </Box>
         <Text bold>Keep cache warm for</Text>
         <Box marginY={1}>
           <Select

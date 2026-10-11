@@ -1,6 +1,7 @@
 import { test, expect, mock } from 'claude-code/testing'
 import { run } from './test-kit'
 
+
 // the world beneath the mod: /clear, prompt submission and toasts are recorded
 function world(on: any) {
   const seen = { clear: 0, forks: [] as string[], turns: 0, prompts: [] as string[], toasts: [] as string[], notes: [] as string[] }
@@ -30,11 +31,15 @@ function world(on: any) {
   return Object.assign(seen, { fail: (r: any) => { reply = r } })
 }
 
-const mountBand = ($: any, on: any) => {
+// the button shows once the context is above 15%, so the session reports 50% and a turn takes the reading
+const mountBand = async ($: any, on: any) => {
+  on('session.usage', async () => ({ value: { startedAt: 0, context: { tokens: 50, window: 100 }, rateLimits: [] } }) as any)
+  on('turn.complete', async () => ({ text: '' }) as any)
   on('ui.render', async ($: any, e: any) => {
     const { Box } = $.ui.resolve(e)
     return <Box />
   })
+  await $.turn.complete({ reason: 'answer', answer: '', durationMs: 0, isAborted: false, turnId: 't' } as any)
   return $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as any })
 }
 

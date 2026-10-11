@@ -22,7 +22,7 @@ test('the band shows the cache countdown, the context forecast and the 5h/7d usa
   await $.turn.complete(TURN)
   const ui = await mount($)
   expect(await ui.find({ type: 'Text', text: /Cache 60m/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /Context 60%/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /60%/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /5h 95%/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /7d 40%/ })).toBeDefined()
 })
@@ -42,15 +42,35 @@ test('without a turn or a reading the band shows no cache or usage text', async 
   world(on, { context: { window: 100 }, rateLimits: [] })
   const ui = await mount($)
   expect(await ui.find({ type: 'Text', text: /Cache/ })).toBeUndefined()
-  expect(await ui.find({ type: 'Text', text: /Context/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /%/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /5h/ })).toBeUndefined()
 })
 
-test('the three buttons share the band', async ($, on) => {
+test('the three buttons share the band once the context is above 15%', async ($, on) => {
   mock.clock(on)
-  world(on, { context: { window: 100 }, rateLimits: [] })
+  world(on, { context: { tokens: 20, window: 100 }, rateLimits: [] })
+  await $.turn.complete(TURN)
   const ui = await mount($)
   expect(await ui.find({ key: 'auto' })).toBeDefined()
+  expect(await ui.find({ key: 'band-all' })).toBeDefined()
+})
+
+test('Reborn stays hidden at or below the chosen context share', async ($, on) => {
+  mock.clock(on)
+  world(on, { context: { tokens: 10, window: 100 }, rateLimits: [] })
+  await $.turn.complete(TURN)
+  const ui = await mount($)
+  expect(await ui.find({ key: 'band-all' })).toBeUndefined()
+  expect(await ui.find({ key: 'auto' })).toBeDefined()
+})
+
+test('the settings pane moves the Reborn threshold', async ($, on) => {
+  mock.clock(on)
+  world(on, { context: { tokens: 10, window: 100 }, rateLimits: [] })
+  await $.turn.complete(TURN)
+  const ui = await mount($)
+  const pane = await $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'cache-settings', props: {} as any })
+  await pane.select({ key: 'reborn-at', value: '0' })
   expect(await ui.find({ key: 'band-all' })).toBeDefined()
 })
 

@@ -1,5 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
+import { BAND_BG, BAND_EDGE } from './look'
 import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 
 // auto-answer AskUserQuestion with the recommended options; on by default, the setting is kept across /clear
@@ -70,15 +71,18 @@ export function registerAutoRecommend(on: On) {
       const auto = settings.autoRecommend
       const isUp = await read($, paneUp)
       const { Box, Button, Text } = $.ui.resolve(e)
-      const button = (
-        <Box>
-          <Text> </Text>
-          {isUp ? (
-            <Button key="auto-clear" label={auto ? '✓ Clear history' : '○ Clear history'} onPress={() => void clearAndClose($)} />
-          ) : (
-            <Button key="auto" label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => openFromBand($)} />
-          )}
+      // a chip of its own beside the band's card, in the same look, so the two read as one bar
+      const chip = (child: any) => (
+        <Box key="auto-chip" flexShrink={0} alignItems="center" paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
+          {child}
         </Box>
+      )
+      const button = chip(
+        isUp ? (
+          <Button key="auto-clear" plain label={auto ? '✓ Clear history' : '○ Clear history'} onPress={() => void clearAndClose($)} />
+        ) : (
+          <Button key="auto" plain label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => openFromBand($)} />
+        ),
       )
       return below ? (
         <Box flexGrow={1} alignItems="flex-start">
