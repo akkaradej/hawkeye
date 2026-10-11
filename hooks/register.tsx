@@ -1,7 +1,9 @@
 import { atom, update } from 'claude-code'
 import type { Register } from 'claude-code'
 import { AUTO_RECOMMEND_COMMANDS, registerAutoRecommend } from './auto-recommend'
-import { registerBand } from './band'
+import { registerBandLeft } from './band-left'
+import { registerBandRight } from './band-right'
+import { registerEffort } from './effort'
 import { CACHE_COMMANDS, registerCache } from './cache'
 import { REBORN_COMMANDS, registerReborn } from './reborn'
 import { SETTINGS_STORE_KEY, restoreSettings } from './settings'
@@ -36,5 +38,7 @@ export const register: Register = on => {
   registerUsage(on)
   registerReborn(on)
   registerAutoRecommend(on)
-  registerBand(on)
+  registerEffort(on)
+  registerBandRight(on)
+  registerBandLeft(on)
 }

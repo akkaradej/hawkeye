@@ -42,12 +42,13 @@ const FORECAST = [
 
 // the gear button: open the cache settings pane (drawn by cache.tsx), or close it when it is already up
 async function toggleSettings($: EngineInterface) {
-  const isUp = (await $.ui.panes()).some(pane => pane.id === 'cache-settings')
-  if (isUp) await $.ui.close({ id: 'cache-settings' })
-  else await $.ui.open({ id: 'cache-settings', title: 'Cache', focus: true, closeOnEscape: true })
+  const isUp = (await $.ui.panes()).some(pane => pane.id === 'settings')
+  if (isUp) await $.ui.close({ id: 'settings' })
+  else await $.ui.open({ id: 'settings', title: 'Settings', focus: true, closeOnEscape: true })
 }
 
-async function row($: EngineInterface, e: any) {
+// the left band: the cache countdown, the context and Reborn, the usage numbers and the gear
+async function leftBand($: EngineInterface, e: any) {
   const hit = await read($, lastHitAt)
   const els = $.ui.resolve(e)
   const { Box, Button, Text } = els
@@ -128,7 +129,7 @@ async function row($: EngineInterface, e: any) {
   )
   // the band is one rounded card: cache on the left, context and Reborn in the middle, usage and the gear pushed right
   const card = (cache: any) => (
-    <Box key="band-card" position="relative" overflow="hidden" flexGrow={1} flexDirection="row" alignItems="center" gap={2} paddingX={1} borderStyle="round" borderColor={working ? CARD_BG : BAND_EDGE} backgroundColor={working ? CARD_BG : BAND_BG}>
+    <Box key="left-band" position="relative" overflow="hidden" flexGrow={1} flexDirection="row" alignItems="center" gap={2} paddingX={1} borderStyle="round" borderColor={working ? CARD_BG : BAND_EDGE} backgroundColor={working ? CARD_BG : BAND_BG}>
       {working && Svg && (
         <Box key="band-art" position="absolute" top={-1} left={0} bottom={-1}>
           <Svg source={handoffArt(nowMs)} alt="handing off" width={1600} height={128} />
@@ -190,7 +191,7 @@ function startTicker($: EngineInterface) {
   })
 }
 
-export function registerBand(on: On) {
+export function registerBandLeft(on: On) {
   // One band is shared with other plugins (Context draws there too):
   // draw our row and stack whatever the plugins beneath draw under it.
   let warned = false
@@ -199,7 +200,7 @@ export function registerBand(on: On) {
     const below = await next(e)
     try {
       if ((e.props ?? e).hasSurvey) return below
-      const mine = await row($, e)
+      const mine = await leftBand($, e)
       const { Box } = $.ui.resolve(e)
       // the buttons are drawn by the features that own them, each in its own hook around this one
       return below ? (

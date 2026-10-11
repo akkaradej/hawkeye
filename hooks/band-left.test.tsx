@@ -69,7 +69,7 @@ test('the settings pane moves the Reborn threshold', async ($, on) => {
   world(on, { context: { tokens: 10, window: 100 }, rateLimits: [] })
   await $.turn.complete(TURN)
   const ui = await mount($)
-  const pane = await $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'cache-settings', props: {} as any })
+  const pane = await $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
   await pane.select({ key: 'reborn-at', value: '0' })
   expect(await ui.find({ key: 'band-all' })).toBeDefined()
 })
@@ -82,7 +82,7 @@ test('a survey hides the band', async ($, on) => {
   expect(await ui.find({ key: 'band-all' })).toBeUndefined()
 })
 
-const settings = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'cache-settings', props: {} as any })
+const settings = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
 
 test('with 2 hours of auto ping the countdown shows the cycle, and the next cycle after a ping', async ($, on) => {
   const clock = mock.clock(on, { now: 1000 })

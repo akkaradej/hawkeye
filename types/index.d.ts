@@ -13,6 +13,10 @@ declare module 'claude-code' {
       autoPaneUp: boolean
       autoHistory: { at: string; entries: { question: string; answer: string }[] }[]
       percent: number | null
+      effortPick: string | null
+      appEffort: string | null
+      sessionModel: string | null
+      judging: boolean
       limits: { fiveHour: number | null; sevenDay: number | null }
     }
   }

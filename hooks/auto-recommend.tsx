@@ -1,6 +1,5 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
-import { BAND_BG, BAND_EDGE } from './look'
 import { SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 
 // auto-answer AskUserQuestion with the recommended options; on by default, the setting is kept across /clear
@@ -36,9 +35,6 @@ async function clearAndClose($: EngineInterface) {
   await update($, paneUp, () => false)
 }
 
-// the band button while the pane is down: open it
-const openFromBand = ($: EngineInterface) => void openPane($)
-
 export function registerAutoRecommend(on: On) {
   // keep paneUp in step with the pane, however it opens or closes
   on('ui.open', { id: PANE }, async ($, e, next) => {
@@ -60,41 +56,6 @@ export function registerAutoRecommend(on: On) {
     const message = `/auto-recommend failed: ${String(next.error)}`
     $.ui.toast(message, { timeoutMs: 20000 })
     return { text: message }
-  })
-
-  // the pane button, at the right of the band
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const below = await next(e)
-    try {
-      if ((e.props ?? e).hasSurvey) return below
-      await read($, settingsPing)
-      const auto = settings.autoRecommend
-      const isUp = await read($, paneUp)
-      const { Box, Button, Text } = $.ui.resolve(e)
-      // a chip of its own beside the band's card, in the same look, so the two read as one bar
-      const chip = (child: any) => (
-        <Box key="auto-chip" flexShrink={0} alignItems="center" paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
-          {child}
-        </Box>
-      )
-      const button = chip(
-        isUp ? (
-          <Button key="auto-clear" plain label={auto ? '✓ Clear history' : '○ Clear history'} onPress={() => void clearAndClose($)} />
-        ) : (
-          <Button key="auto" plain label={auto ? '✓ Auto-recommend' : '○ Auto-recommend'} onPress={() => openFromBand($)} />
-        ),
-      )
-      return below ? (
-        <Box flexGrow={1} alignItems="flex-start">
-          <Box flexGrow={1}>{below}</Box>
-          {button}
-        </Box>
-      ) : (
-        button
-      )
-    } catch {
-      return below
-    }
   })
 
   // answer AskUserQuestion with each question's "(Recommended)" option(s), when every
