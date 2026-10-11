@@ -189,15 +189,19 @@ export function registerBandRight(on: On) {
       // a narrow screen stacks the band: Next steps and Auto on the first rows, Recommend and its icon on the last
       const narrow = (e.viewport?.columns ?? Infinity) < NARROW_COLUMNS
       // the gear: opens the cache settings pane. A blank button over the drawn cog (the pattern of the history icon); the terminal keeps the ⚙ glyph
+      // stacked, the gear carries its word: a separate text button so the hover areas stay apart
       const gear = Svg ? (
-        <Box key="cache-settings-icon" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
-          <Svg source={cogSvg('#a1a1aa')} alt="Cache settings" width={14} height={14} />
-          <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
-            <Button key="cache-settings" label={'\u00a0'.repeat(3)} plain onPress={() => void toggleSettings($)} />
+        <Box key="cache-settings-group" flexDirection="row" alignItems="center">
+          <Box key="cache-settings-icon" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={narrow ? -1 : 0}>
+            <Svg source={cogSvg('#a1a1aa')} alt="Cache settings" width={14} height={14} />
+            <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
+              <Button key="cache-settings" label={'\u00a0'.repeat(3)} plain onPress={() => void toggleSettings($)} />
+            </Box>
           </Box>
+          {narrow && <Button key="cache-settings-text" plain dimColor hover={{ backgroundColor: BAND_BG }} label="Settings" onPress={() => void toggleSettings($)} />}
         </Box>
       ) : (
-        <Button key="cache-settings" label=" ⚙ " plain dimColor onPress={() => void toggleSettings($)} />
+        <Button key="cache-settings" label={narrow ? ' ⚙ Settings ' : ' ⚙ '} plain dimColor onPress={() => void toggleSettings($)} />
       )
       const rightBand = (
         <Box key="right-band" flexShrink={0} flexDirection={narrow ? 'column' : 'row'} alignItems={narrow ? 'flex-start' : 'center'} gap={narrow ? 1 : 0} paddingX={1} marginLeft={1} borderStyle="round" borderColor={BAND_EDGE} backgroundColor={BAND_BG}>
