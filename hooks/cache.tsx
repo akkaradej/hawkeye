@@ -7,8 +7,9 @@ const lastHitAt = atom({ plugin: 'hawkeye', key: 'lastHitAt' } as const, null)
 // the last finished turn; pings refresh the cache but do not count as use
 const lastTurnAt = atom({ plugin: 'hawkeye', key: 'lastTurnAt' } as const, null)
 const sessionState = atom({ plugin: 'hawkeye', key: 'sessionState' } as const, 'idle')
+const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
 const notified = atom({ plugin: 'hawkeye', key: 'notified' } as const, false)
-export const isPinging = atom({ plugin: 'hawkeye', key: 'isPinging' } as const, false)
+const isPinging = atom({ plugin: 'hawkeye', key: 'isPinging' } as const, false)
 // how long the cache is kept warm after the last turn, and how long before a cache cycle ends the ping goes out
 // pings since the last turn: the band counts the cache cycles with it
 const cachePings = atom({ plugin: 'hawkeye', key: 'cachePings' } as const, 0)
@@ -60,7 +61,7 @@ function startTicker($: EngineInterface) {
 }
 
 // resetWindow: the ping also starts the warm window over, as if a turn had just finished
-export async function ping($: EngineInterface, isAuto = false, resetWindow = false): Promise<string> {
+async function ping($: EngineInterface, isAuto = false, resetWindow = false): Promise<string> {
   if (await read($, isPinging)) return 'Ping already running.'
   await update($, isPinging, () => true)
   try {
@@ -93,7 +94,8 @@ export function registerCache(on: On) {
     return next(e)
   })
 
-  on('command.run', { command: 'cache-ping' }, async $ => ({ text: await ping($) }))
+  // `reset` is what the settings pane's button sends: $ cannot cross a file, so the pane runs the command
+  on('command.run', { command: 'cache-ping' }, async ($, e) => ({ text: await ping($, false, e.args.trim() === 'reset') }))
   .catch(($, e, next) => {
     const message = `/cache-ping failed: ${String(next.error)}`
     $.ui.toast(message, { timeoutMs: 20000 })

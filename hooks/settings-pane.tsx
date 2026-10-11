@@ -2,10 +2,10 @@ import { atom, read, update } from 'claude-code'
 import type { On } from 'claude-code'
 import { EFFORTS, JUDGE_EFFORTS, REBORN_PCTS, SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 import { SPINNER, WARM_HOURS } from './format'
-import { isPinging, ping } from './cache'
 
 // the values are in ./settings; this atom only redraws
 const settingsPing = atom({ plugin: 'hawkeye', key: 'settingsPing' } as const, false)
+const isPinging = atom({ plugin: 'hawkeye', key: 'isPinging' } as const, false)
 const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
 
 export const SETTINGS_PANE = 'settings'
@@ -83,7 +83,7 @@ export function registerSettingsPane(on: On) {
           {isWarming ? (
             <Text color="cyan" bold>{frame} Warming…</Text>
           ) : (
-            <Button key="warm-now" label="Warm now and restore cycle" onPress={() => void ping($, false, true)} />
+            <Button key="warm-now" label="Warm now and restore cycle" onPress={() => void $.command.run({ command: 'cache-ping', args: 'reset', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })} />
           )}
         </Box>
       </Box>
