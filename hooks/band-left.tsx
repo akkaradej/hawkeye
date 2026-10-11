@@ -21,6 +21,10 @@ function ringSvg(percent: number, color: string, spin = false) {
   const c = 2 * Math.PI * 6
   return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">${spin ? '<style>.s{transform-origin:8px 8px;animation:s 1.1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}</style>' : ''}<circle cx="8" cy="8" r="6" fill="none" stroke="${color}" stroke-opacity=".25" stroke-width="2.2"/><g${spin ? ' class="s"' : ''}><circle cx="8" cy="8" r="6" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="${((c * p) / 100).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 8 8)"/></g></svg>`
 }
+// the state dot; it pulses (opacity) while running, and is an empty ring glyph in the text's own dim when idle, so the two match
+function dotSvg(color: string, pulse: boolean) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">${pulse ? '<style>.p{animation:p 1.2s ease-in-out infinite}@keyframes p{0%,100%{opacity:1}50%{opacity:.25}}</style>' : ''}<circle${pulse ? ' class="p"' : ''} cx="6" cy="6" r="5" fill="${color}"/></svg>`
+}
 // Forecast bands, by percent of the context window used.
 const FORECAST = [
   { upTo: 25, icon: '☀', word: 'Clear', color: 'yellow', hex: '#facc15' },
@@ -39,9 +43,13 @@ async function leftBand($: EngineInterface, e: any) {
   const Svg = e.surface !== 'terminal' && 'Svg' in els ? (els as any).Svg : null
   const pct = await read($, percent)
   const st = await read($, sessionState)
+  const DOT = { running: ['#d97757', '#d97757', 'Running'], asking: ['#facc15', 'yellow', 'Needs permission'], idle: ['#6b7280', undefined, 'Idle'] } as const
+  const [dotHex, dotColor, dotWord] = DOT[st as keyof typeof DOT] ?? DOT.idle
+  // the dot breathes while the session works; the other states hold still
   const dot = (
-    <Box key="band-state" position="relative">
-      {st === 'running' ? <Text color="cyan">● Running</Text> : st === 'asking' ? <Text color="yellow">● Needs permission</Text> : <Text dimColor>● Idle</Text>}
+    <Box key="band-state" position="relative" alignItems="center">
+      {Svg && st !== 'idle' ? <Svg source={dotSvg(dotHex, st === 'running')} alt={dotWord} width={12} height={12} /> : <Text color={dotColor} dimColor={!dotColor}>{st === 'idle' ? '○' : '●'}</Text>}
+      <Text color={dotColor} dimColor={!dotColor}> {dotWord}</Text>
     </Box>
   )
   // the Reborn button: on the desktop a hawk icon and the word, with a blank button laid over both to
