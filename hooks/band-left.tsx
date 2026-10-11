@@ -12,6 +12,8 @@ const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
 // Reborn: reborn.tsx runs the flow; the button here asks for it, and the spinner follows its phase
 const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
 const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
+// this session's state: running a turn, waiting on a permission answer, or idle
+const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
 const percent = atom({ plugin: 'my-mods', key: 'percent' } as const, null)
 // the context as a ring: a faint track with the used share drawn over it, in the forecast's colour
 function ringSvg(percent: number, color: string, spin = false) {
@@ -36,6 +38,12 @@ async function leftBand($: EngineInterface, e: any) {
   const { Box, Button, Text } = els
   const Svg = e.surface !== 'terminal' && 'Svg' in els ? (els as any).Svg : null
   const pct = await read($, percent)
+  const st = await read($, sessionState)
+  const dot = (
+    <Box key="band-state" position="relative">
+      {st === 'running' ? <Text color="cyan">● Running</Text> : st === 'asking' ? <Text color="yellow">● Needs permission</Text> : <Text dimColor>● Idle</Text>}
+    </Box>
+  )
   // the Reborn button: on the desktop a hawk icon and the word, with a blank button laid over both to
   // take the press. The highlight is the row's own hover (scoped to the button), so it always fits the row, not the blanks (no-break spaces, as the cog; the font is proportional, so a letter is wider than a blank: about 1.8 blanks); the terminal keeps the ☀ glyph
   const rebornButton = (word: string, onPress: () => void) =>
@@ -108,6 +116,7 @@ async function leftBand($: EngineInterface, e: any) {
           <Svg source={handoffArt(nowMs)} alt="handing off" width={1600} height={128} />
         </Box>
       )}
+      {dot}
       <Box key="band-cache" position="relative">{cache}</Box>
       <Box key="band-context" position="relative">{context}</Box>
       <Box key="band-spacer" flexGrow={1} />
@@ -153,6 +162,18 @@ export function registerBandLeft(on: On) {
   // One band is shared with other plugins (Context draws there too):
   // draw our row and stack whatever the plugins beneath draw under it.
   let warned = false
+  on('classic.PermissionRequest', async ($, e, next) => {
+    await update($, sessionState, () => 'asking')
+    return next(e)
+  })
+  on('classic.PostToolUse', async ($, e, next) => {
+    await update($, sessionState, () => 'running')
+    return next(e)
+  })
+  on('turn.start', async ($, e, next) => {
+    await update($, sessionState, () => 'running')
+    return next(e)
+  })
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     startTicker($)
     const below = await next(e)

@@ -10,6 +10,7 @@ declare module 'claude-code' {
       isPinging: boolean
       phase: 'saving' | 'clearing' | null
       rebornAsk: boolean
+      sessionState: 'idle' | 'running' | 'asking'
       autoPaneUp: boolean
       autoHistory: { at: string; entries: { question: string; answer: string }[] }[]
       percent: number | null

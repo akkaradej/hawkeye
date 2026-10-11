@@ -9,6 +9,8 @@ const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 // whether the pane is drawn now, so the band button can offer to clear it
 const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
+// the band's state dot: a question left to the user is a wait, like a permission prompt
+const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
 
 export const AUTO_RECOMMEND_COMMANDS = [
   { name: 'auto-recommend', description: 'Open the auto-recommend pane (toggle, history of auto answers)' },
@@ -47,12 +49,12 @@ export function registerAutoRecommend(on: On) {
   // answer AskUserQuestion with each question's "(Recommended)" option(s), when every
   // question is a plain choice with one; otherwise the dialog opens as usual
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
-    if (!settings.autoRecommend) return next(e)
+    if (!settings.autoRecommend) { await update($, sessionState, () => 'asking'); const r = await next(e); await update($, sessionState, () => 'running'); return r }
     const answers: Record<string, string> = {}
     for (const q of e.questions as any[]) {
-      if (q.kind && q.kind !== 'choice') return next(e)
+      if (q.kind && q.kind !== 'choice') { await update($, sessionState, () => 'asking'); const r = await next(e); await update($, sessionState, () => 'running'); return r }
       const picked = (q.options as any[]).filter(o => /\(recommended\)/i.test(o.label))
-      if (!picked.length) return next(e)
+      if (!picked.length) { await update($, sessionState, () => 'asking'); const r = await next(e); await update($, sessionState, () => 'running'); return r }
       const chosen = q.multiSelect ? picked : picked.slice(0, 1)
       answers[q.question] = chosen.map(o => o.label).join(', ')
     }

@@ -6,6 +6,7 @@ import { HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS,
 const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
 // the last finished turn; pings refresh the cache but do not count as use
 const lastTurnAt = atom({ plugin: 'my-mods', key: 'lastTurnAt' } as const, null)
+const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
 const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
 const notified = atom({ plugin: 'my-mods', key: 'notified' } as const, false)
 const isPinging = atom({ plugin: 'my-mods', key: 'isPinging' } as const, false)
@@ -202,6 +203,7 @@ export function registerCache(on: On) {
     await update($, lastTurnAt, () => t)
     await update($, cachePings, () => 0)
     await update($, now, () => t)
+    await update($, sessionState, () => 'idle')
     await update($, notified, () => false)
 
     return next(e)
