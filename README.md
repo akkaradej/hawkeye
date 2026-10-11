@@ -19,6 +19,7 @@ A Claude Code mod that adds bands above the prompt and keeps an eye on your sess
 | --- | --- |
 | `/cache-ping` | Refresh the prompt cache with a tiny forked request |
 | `/cache-status` | Show the prompt cache countdown |
+| `/reborn` | Write a handoff, clear this session, and carry on in a new one |
 | `/auto-recommend` | Open the auto-recommend pane (toggle, history of auto answers) |
 
 Settings live in the settings pane (cache warm hours, auto-recommend, auto effort, effort range, Reborn threshold and more).
