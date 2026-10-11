@@ -5,6 +5,7 @@ import { registerBandLeft } from './band-left'
 import { registerBandRight } from './band-right'
 import { registerEffort } from './effort'
 import { CACHE_COMMANDS, registerCache } from './cache'
+import { registerSettingsPane } from './settings-pane'
 import { REBORN_COMMANDS, registerReborn } from './reborn'
 import { SETTINGS_STORE_KEY, restoreSettings } from './settings'
 import { registerUsage } from './usage'
@@ -35,6 +36,7 @@ export const register: Register = on => {
   })
 
   registerCache(on)
+  registerSettingsPane(on)
   registerUsage(on)
   registerReborn(on)
   registerAutoRecommend(on)
