@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
-import { EFFORTS, SETTINGS_STORE_KEY, clampEffort, setSetting, settings } from './settings'
+import { EFFORTS, clampEffort, settings } from './settings'
 
 // Auto effort, the small copy of effortless's: Haiku reads each message you send and picks the effort for it.
 // Effort only; the model is never switched. The setting is in ./settings and the band toggles it; the atoms only hold what the band shows.
@@ -57,10 +57,6 @@ async function askHaiku($: EngineInterface, text: string, current: string): Prom
   return r.isAnswered ? parseEffort(r.text) : undefined
 }
 
-// the effort and model the app sent on the last main request; a change in it that the mod did not make is the person's
-let seenEffort: string | undefined
-let seenModel: string | undefined
-
 export function registerEffort(on: On) {
   on('prompt.submit', async ($, e, next) => {
     const byPerson = e.origin.kind === 'composer' || e.origin.kind === 'bridge' || e.origin.kind === 'sdk'
@@ -85,17 +81,6 @@ export function registerEffort(on: On) {
       await update($, sessionModel, () => e.model)
       if (typeof e.effort === 'string') {
         await update($, appEffort, () => e.effort)
-        // the effort can differ per model, so a model switch is not the person picking one
-        const byPerson = seenEffort !== undefined && seenModel === e.model && seenEffort !== e.effort
-        seenEffort = e.effort
-        seenModel = e.model
-        if (byPerson && settings.autoEffort) {
-          const all = setSetting('autoEffort', false)
-          await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
-          await update($, effortPick, () => null)
-          $.ui.toast(`Auto effort is off: you picked ${e.effort}. Turn Auto on to hand it back.`)
-          return yield* next(e)
-        }
       }
       const pick = await read($, effortPick)
       if (settings.autoEffort && pick && cacheSafe(e.model)) return yield* next({ ...e, effort: pick })
