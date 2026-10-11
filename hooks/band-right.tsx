@@ -35,6 +35,15 @@ let autoSeen: boolean | undefined
 let autoFlipAt = 0
 let recSeen: boolean | undefined
 let recFlipAt = 0
+// The next-steps plugin has no switch of its own; its "Shortest answer to suggest after" row can act as one.
+// The pill shows only when that row exists, looked up once per load.
+const NEXT_STEPS_ROW = 'next-steps.minAnswerChars'
+const NEXT_STEPS_ON = 80
+const NEXT_STEPS_OFF = 1000000
+let nextStepsInstalled = false
+let nextStepsChecked = false
+let nextSeen: boolean | undefined
+let nextFlipAt = 0
 
 // outline icons, 14 px, the colour of the dim text: an open-link (a box with an arrow out of its corner) and a trash can
 function linkSvg(color: string) {
@@ -96,6 +105,38 @@ export function registerBandRight(on: On) {
         await update($, settingsPing, p => !p)
         await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
       }
+      const toggleNextSteps = async () => {
+        const all = setSetting('nextSteps', !settings.nextSteps)
+        await update($, settingsPing, p => !p)
+        await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
+        try {
+          await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
+        } catch {}
+      }
+      if (!nextStepsChecked) {
+        nextStepsChecked = true
+        try {
+          nextStepsInstalled = (await $.config.list()).some(r => r.key === NEXT_STEPS_ROW)
+          // a reload or a new session starts the plugin at its own default: bring it to the saved state
+          if (nextStepsInstalled) await $.config.set({ key: NEXT_STEPS_ROW, value: settings.nextSteps ? NEXT_STEPS_ON : NEXT_STEPS_OFF })
+        } catch {}
+      }
+      const nextOn = settings.nextSteps
+      if (nextSeen !== undefined && nextSeen !== nextOn) nextFlipAt = nowMs
+      nextSeen = nextOn
+      const nextItem = !nextStepsInstalled ? null : Svg ? (
+        <Box key="right-next" flexDirection="row" alignItems="center" marginLeft={1}>
+          <Box key="next-switch" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={-1}>
+            <Svg source={switchSvg(nextOn, nowMs - nextFlipAt)} alt={nextOn ? 'Next steps on' : 'Next steps off'} width={26} height={15} />
+            <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
+              <Button key="next-pill" plain hover={{ backgroundColor: 'rgba(20,20,22,0)' }} label={'\u00a0'.repeat(6)} onPress={() => void toggleNextSteps()} />
+            </Box>
+          </Box>
+          <Button key="next-text" plain dimColor hover={{ backgroundColor: BAND_BG }} label="Next steps" onPress={() => void toggleNextSteps()} />
+        </Box>
+      ) : (
+        <Button key="next-text" plain dimColor={!nextOn} color={nextOn ? 'green' : undefined} label={nextOn ? 'Next steps on' : 'Next steps off'} onPress={() => void toggleNextSteps()} />
+      )
       const recommendItem = Svg ? (
         <Box key="right-recommend" flexDirection="row" alignItems="center">
           <Box key="recommend-switch" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={-1}>
@@ -135,6 +176,7 @@ export function registerBandRight(on: On) {
           {/* Recommend and its history icon sit together, closer than the band's gap between items */}
           <Box key="right-recommend-group" flexDirection="row" alignItems="center">
             {recommendItem}
+            {nextItem}
             {/* the pane's button as an icon with a blank button over it (the cog's pattern): a trash can to clear the history while the pane is up, else an open-link to open it */}
             {Svg ? (
               <Box key="right-pane" position="relative" alignItems="center" justifyContent="center" paddingX={1}>
