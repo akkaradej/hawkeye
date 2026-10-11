@@ -32,7 +32,7 @@ const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
 const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
 // below this many columns the band is two rows
-const NARROW_COLUMNS = 100
+const NARROW_COLUMNS = 80
 
 // Auto as a switch, as in effortless: a pill with its knob right and violet when on, left and grey when off.
 // Right after a flip the image carries a slide (knob and colour move over SLIDE_MS) instead of jumping.
@@ -145,15 +145,15 @@ export function registerBandRight(on: On) {
       const nextItem = Svg ? (
         <Box key="right-next" flexDirection="row" alignItems="center">
           <Box key="next-switch" position="relative" alignItems="center" justifyContent="center" paddingX={1} marginRight={-1}>
-            <Svg source={switchSvg(nextOn, nowMs - nextFlipAt)} alt={nextOn ? 'Next steps on' : 'Next steps off'} width={26} height={15} />
+            <Svg source={switchSvg(nextOn, nowMs - nextFlipAt)} alt={nextOn ? 'Suggest on' : 'Suggest off'} width={26} height={15} />
             <Box position="absolute" top={0} bottom={0} left={0} right={0} alignItems="center" justifyContent="center">
               <Button key="next-pill" plain hover={{ backgroundColor: 'rgba(20,20,22,0)' }} label={'\u00a0'.repeat(6)} onPress={() => void toggleNextSteps()} />
             </Box>
           </Box>
-          <Button key="next-text" plain dimColor hover={{ backgroundColor: BAND_BG }} label="Next steps" onPress={() => void toggleNextSteps()} />
+          <Button key="next-text" plain dimColor hover={{ backgroundColor: BAND_BG }} label="Suggest" onPress={() => void toggleNextSteps()} />
         </Box>
       ) : (
-        <Button key="next-text" plain dimColor={!nextOn} color={nextOn ? 'green' : undefined} label={nextOn ? 'Next steps on' : 'Next steps off'} onPress={() => void toggleNextSteps()} />
+        <Button key="next-text" plain dimColor={!nextOn} color={nextOn ? 'green' : undefined} label={nextOn ? 'Suggest on' : 'Suggest off'} onPress={() => void toggleNextSteps()} />
       )
       const recommendItem = Svg ? (
         <Box key="right-recommend" flexDirection="row" alignItems="center">
@@ -186,7 +186,7 @@ export function registerBandRight(on: On) {
           <Text dimColor> {effortText}</Text>
         </Box>
       )
-      // a narrow screen stacks the band: Next steps and Auto on the first rows, Recommend and its icon on the last
+      // a narrow screen stacks the band: Suggest and Auto on the first rows, Recommend and its icon on the last
       const narrow = (e.viewport?.columns ?? Infinity) < NARROW_COLUMNS
       // the gear: opens the cache settings pane. A blank button over the drawn cog (the pattern of the history icon); the terminal keeps the ⚙ glyph
       // stacked, the gear carries its word: a separate text button so the hover areas stay apart
