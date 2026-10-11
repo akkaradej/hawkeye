@@ -203,7 +203,8 @@ export function registerCache(on: On) {
     await update($, lastTurnAt, () => t)
     await update($, cachePings, () => 0)
     await update($, now, () => t)
-    await update($, sessionState, () => 'idle')
+    // a subagent's turn ending does not end the main one
+    if (!e.agentId) await update($, sessionState, () => 'idle')
     await update($, notified, () => false)
 
     return next(e)
