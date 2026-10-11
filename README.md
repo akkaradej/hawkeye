@@ -1,11 +1,11 @@
 # Hawkeye
 
-A Claude Code mod that adds bands above the prompt and keeps an eye on your session.
+Claude Code mod: status dot, extend prompt cache, context ring, reborn, auto effort and more.
 
 ## Features
 
-- **Session status dot**: coral pulse while a turn is running, an empty ring when idle, and a wait state for permission prompts or questions.
-- **Prompt-cache countdown**: shows how long the prompt cache stays warm. It can ping the cache with a tiny forked request to keep it warm for a chosen number of hours after your last turn.
+- **Status dot**: coral pulse while a turn is running, an empty ring when idle, and a wait state for permission prompts or questions.
+- **Extend prompt cache**: shows a countdown of how long the prompt cache stays warm, and can ping the cache with a tiny forked request to keep it warm for a chosen number of hours after your last turn.
 - **Context ring**: shows how much of the context window is used, with a forecast (Clear, and so on) by percent.
 - **Usage limits**: 5-hour and 7-day rate-limit usage in the status line under the prompt.
 - **Reborn**: writes a handoff of the current session (goal, git state and so on), clears, and continues in a fresh session. The button appears once the context passes a set percent.
