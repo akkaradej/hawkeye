@@ -1,8 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
 
-const limits = atom({ plugin: 'my-mods', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
-const percent = atom({ plugin: 'my-mods', key: 'percent' } as const, null)
+const limits = atom({ plugin: 'hawkeye', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
+const percent = atom({ plugin: 'hawkeye', key: 'percent' } as const, null)
 
 async function takeReading($: EngineInterface) {
   try {

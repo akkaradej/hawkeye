@@ -4,10 +4,10 @@ import { EFFORTS, clampEffort, settings } from './settings'
 
 // Auto effort, the small copy of effortless's: Haiku reads each message you send and picks the effort for it.
 // Effort only; the model is never switched. The setting is in ./settings and the band toggles it; the atoms only hold what the band shows.
-const effortPick = atom({ plugin: 'my-mods', key: 'effortPick' } as const, null)
-const appEffort = atom({ plugin: 'my-mods', key: 'appEffort' } as const, null)
-const sessionModel = atom({ plugin: 'my-mods', key: 'sessionModel' } as const, null)
-const judging = atom({ plugin: 'my-mods', key: 'judging' } as const, false)
+const effortPick = atom({ plugin: 'hawkeye', key: 'effortPick' } as const, null)
+const appEffort = atom({ plugin: 'hawkeye', key: 'appEffort' } as const, null)
+const sessionModel = atom({ plugin: 'hawkeye', key: 'sessionModel' } as const, null)
+const judging = atom({ plugin: 'hawkeye', key: 'judging' } as const, false)
 
 // the plain alias, so the judge follows the newest Haiku when one ships
 const HAIKU = 'haiku'

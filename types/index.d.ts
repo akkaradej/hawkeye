@@ -1,6 +1,6 @@
 declare module 'claude-code' {
   interface PluginState {
-    'my-mods': {
+    'hawkeye': {
       lastHitAt: number | null
       lastTurnAt: number | null
       settingsPing: boolean

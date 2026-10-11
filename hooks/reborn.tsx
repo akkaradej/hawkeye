@@ -3,11 +3,11 @@ import type { EngineInterface, On } from 'claude-code'
 import { SPINNER } from './format'
 
 // 'writing' while the handoff is written, 'clearing' while /clear runs, null otherwise
-const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
+const phase = atom({ plugin: 'hawkeye', key: 'phase' } as const, null)
 // ticks every second while Reborn works, to turn the spinner
-const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
+const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
 // set by the band's button, which cannot call reborn() from its own file; the timer takes the ask
-const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
+const rebornAsk = atom({ plugin: 'hawkeye', key: 'rebornAsk' } as const, false)
 
 const PENDING_KEY = 'rebornPending'
 

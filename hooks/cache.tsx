@@ -3,18 +3,18 @@ import type { EngineInterface, On, Timer } from 'claude-code'
 import { EFFORTS, JUDGE_EFFORTS, REBORN_PCTS, SETTINGS_STORE_KEY, setSetting, settings } from './settings'
 import { HOUR_MS, MIN_MS, PING_BEFORE_MIN, SPINNER, TTL_MS, WARM_HOURS, WARN_MS, clock } from './format'
 
-const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
+const lastHitAt = atom({ plugin: 'hawkeye', key: 'lastHitAt' } as const, null)
 // the last finished turn; pings refresh the cache but do not count as use
-const lastTurnAt = atom({ plugin: 'my-mods', key: 'lastTurnAt' } as const, null)
-const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
-const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
-const notified = atom({ plugin: 'my-mods', key: 'notified' } as const, false)
-const isPinging = atom({ plugin: 'my-mods', key: 'isPinging' } as const, false)
+const lastTurnAt = atom({ plugin: 'hawkeye', key: 'lastTurnAt' } as const, null)
+const sessionState = atom({ plugin: 'hawkeye', key: 'sessionState' } as const, 'idle')
+const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
+const notified = atom({ plugin: 'hawkeye', key: 'notified' } as const, false)
+const isPinging = atom({ plugin: 'hawkeye', key: 'isPinging' } as const, false)
 // how long the cache is kept warm after the last turn, and how long before a cache cycle ends the ping goes out
 // the value is in ./settings; this atom only redraws
-const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
+const settingsPing = atom({ plugin: 'hawkeye', key: 'settingsPing' } as const, false)
 // pings since the last turn: the band counts the cache cycles with it
-const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
+const cachePings = atom({ plugin: 'hawkeye', key: 'cachePings' } as const, 0)
 
 const SETTINGS_PANE = 'settings'
 const RETRY_MS = 60 * 1000

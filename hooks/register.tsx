@@ -9,10 +9,10 @@ import { REBORN_COMMANDS, registerReborn } from './reborn'
 import { SETTINGS_STORE_KEY, restoreSettings } from './settings'
 import { registerUsage } from './usage'
 
-const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
-const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
-const autoHistory = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
-const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
+const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
+const phase = atom({ plugin: 'hawkeye', key: 'phase' } as const, null)
+const autoHistory = atom({ plugin: 'hawkeye', key: 'autoHistory' } as const, [])
+const settingsPing = atom({ plugin: 'hawkeye', key: 'settingsPing' } as const, false)
 
 // Cache countdown: each feature registers its own hooks from its own file. A plugin has one
 // session.start, so the features' commands are registered from it. Only `on` crosses a file;

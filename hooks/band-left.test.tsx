@@ -14,7 +14,7 @@ function world(on: any, usage: any) {
     return <Box />
   })
 }
-const mount = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
+const mount = ($: any) => $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
 
 test('the band shows the cache countdown, the context forecast', async ($, on) => {
   mock.clock(on, { now: 1000 })
@@ -68,7 +68,7 @@ test('the settings pane moves the Reborn threshold', async ($, on) => {
   world(on, { context: { tokens: 10, window: 100 }, rateLimits: [] })
   await $.turn.complete(TURN)
   const ui = await mount($)
-  const pane = await $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
+  const pane = await $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
   await pane.select({ key: 'reborn-at', value: '0' })
   expect(await ui.find({ key: 'band-all' })).toBeDefined()
 })
@@ -76,12 +76,12 @@ test('the settings pane moves the Reborn threshold', async ($, on) => {
 test('a survey hides the band', async ($, on) => {
   mock.clock(on)
   world(on, { context: { window: 100 }, rateLimits: [] })
-  const ui = await $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: true } as any })
+  const ui = await $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: true } as any })
   expect(await ui.find({ key: 'auto' })).toBeUndefined()
   expect(await ui.find({ key: 'band-all' })).toBeUndefined()
 })
 
-const settings = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
+const settings = ($: any) => $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
 
 test('with 2 hours of auto ping the countdown shows the cycle, and the next cycle after a ping', async ($, on) => {
   const clock = mock.clock(on, { now: 1000 })

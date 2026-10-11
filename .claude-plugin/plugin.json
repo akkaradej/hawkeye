@@ -1,1 +1,1 @@
-{ "name": "my-mods", "version": "0.1.0", "description": "Prompt-cache countdown band: green above 5 min, red below with push notice, Reborn (continue in a new session) and cheap Ping buttons", "author": { "name": "akkaradej" }, "types": "./types/index.d.ts" }
+{ "name": "hawkeye", "version": "0.1.0", "description": "Bands above the prompt: session status dot, prompt-cache countdown, context ring, Reborn (continue in a new session), Suggest, Auto effort and auto-answered recommendations", "author": { "name": "akkaradej" }, "types": "./types/index.d.ts" }

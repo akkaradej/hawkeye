@@ -23,13 +23,13 @@ async function toggleSettings($: EngineInterface) {
   else await $.ui.open({ id: 'settings', title: 'Settings', focus: true, closeOnEscape: true })
 }
 
-const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
-const effortPick = atom({ plugin: 'my-mods', key: 'effortPick' } as const, null)
-const appEffort = atom({ plugin: 'my-mods', key: 'appEffort' } as const, null)
-const sessionModel = atom({ plugin: 'my-mods', key: 'sessionModel' } as const, null)
-const judging = atom({ plugin: 'my-mods', key: 'judging' } as const, false)
-const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
-const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
+const settingsPing = atom({ plugin: 'hawkeye', key: 'settingsPing' } as const, false)
+const effortPick = atom({ plugin: 'hawkeye', key: 'effortPick' } as const, null)
+const appEffort = atom({ plugin: 'hawkeye', key: 'appEffort' } as const, null)
+const sessionModel = atom({ plugin: 'hawkeye', key: 'sessionModel' } as const, null)
+const judging = atom({ plugin: 'hawkeye', key: 'judging' } as const, false)
+const history = atom({ plugin: 'hawkeye', key: 'autoHistory' } as const, [])
+const paneUp = atom({ plugin: 'hawkeye', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
 // below this many columns the band is two rows
 const NARROW_COLUMNS = 80

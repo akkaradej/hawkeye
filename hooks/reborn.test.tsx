@@ -40,7 +40,7 @@ const mountBand = async ($: any, on: any) => {
     return <Box />
   })
   await $.turn.complete({ reason: 'answer', answer: '', durationMs: 0, isAborted: false, turnId: 't' } as any)
-  return $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as any })
+  return $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'AbovePrompt', props: { hasSurvey: false, bodyColumns: 80 } as any })
 }
 
 test('the reborn button forks a handoff with the git state, then clears and sends it, waiting for the user', async ($, on) => {

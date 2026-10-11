@@ -69,10 +69,10 @@ test('/cache-ping reports a failed fork', async ($, on) => {
 })
 
 // the band's 1 s tickers start with the first draw, so the long waits come before it
-const mount = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
+const mount = ($: any) => $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'AbovePrompt', props: {} as any })
 
 // the settings pane, as the person opens it; press its buttons by key
-const settings = ($: any) => $.ui.mount({ plugin: 'my-mods', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
+const settings = ($: any) => $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
 
 test('the band has a settings button and no manual Ping button', async ($, on) => {
   mock.clock(on, { now: 1000 })

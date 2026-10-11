@@ -5,16 +5,16 @@ import { settings } from './settings'
 import { BAND_BG, BAND_EDGE, CARD_BG } from './look'
 import { handoffArt, hawkSvg } from './card'
 
-const lastHitAt = atom({ plugin: 'my-mods', key: 'lastHitAt' } as const, null)
-const now = atom({ plugin: 'my-mods', key: 'now' } as const, 0)
-const settingsPing = atom({ plugin: 'my-mods', key: 'settingsPing' } as const, false)
-const cachePings = atom({ plugin: 'my-mods', key: 'cachePings' } as const, 0)
+const lastHitAt = atom({ plugin: 'hawkeye', key: 'lastHitAt' } as const, null)
+const now = atom({ plugin: 'hawkeye', key: 'now' } as const, 0)
+const settingsPing = atom({ plugin: 'hawkeye', key: 'settingsPing' } as const, false)
+const cachePings = atom({ plugin: 'hawkeye', key: 'cachePings' } as const, 0)
 // Reborn: reborn.tsx runs the flow; the button here asks for it, and the spinner follows its phase
-const phase = atom({ plugin: 'my-mods', key: 'phase' } as const, null)
-const rebornAsk = atom({ plugin: 'my-mods', key: 'rebornAsk' } as const, false)
+const phase = atom({ plugin: 'hawkeye', key: 'phase' } as const, null)
+const rebornAsk = atom({ plugin: 'hawkeye', key: 'rebornAsk' } as const, false)
 // this session's state: running a turn, waiting on a permission answer, or idle
-const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
-const percent = atom({ plugin: 'my-mods', key: 'percent' } as const, null)
+const sessionState = atom({ plugin: 'hawkeye', key: 'sessionState' } as const, 'idle')
+const percent = atom({ plugin: 'hawkeye', key: 'percent' } as const, null)
 // the context as a ring: a faint track with the used share drawn over it, in the forecast's colour
 function ringSvg(percent: number, color: string, spin = false) {
   const p = Math.max(0, Math.min(100, percent))

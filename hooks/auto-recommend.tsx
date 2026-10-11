@@ -5,12 +5,12 @@ import { settings } from './settings'
 // auto-answer AskUserQuestion with the recommended options; on by default, the setting is kept across /clear
 // the value is in ./settings and the band's switch toggles it
 // what was auto-answered; reset at session start, or by the band's clear button
-const history = atom({ plugin: 'my-mods', key: 'autoHistory' } as const, [])
+const history = atom({ plugin: 'hawkeye', key: 'autoHistory' } as const, [])
 // whether the pane is drawn now, so the band button can offer to clear it
-const paneUp = atom({ plugin: 'my-mods', key: 'autoPaneUp' } as const, false)
+const paneUp = atom({ plugin: 'hawkeye', key: 'autoPaneUp' } as const, false)
 const PANE = 'auto-recommend'
 // the band's state dot: a question left to the user is a wait, like a permission prompt
-const sessionState = atom({ plugin: 'my-mods', key: 'sessionState' } as const, 'idle')
+const sessionState = atom({ plugin: 'hawkeye', key: 'sessionState' } as const, 'idle')
 
 export const AUTO_RECOMMEND_COMMANDS = [
   { name: 'auto-recommend', description: 'Open the auto-recommend pane (toggle, history of auto answers)' },
