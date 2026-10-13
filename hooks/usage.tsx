@@ -1,19 +1,20 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
-import { tildify } from './format'
+import { shortDir } from './format'
 
 const limits = atom({ plugin: 'hawkeye', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
 const percent = atom({ plugin: 'hawkeye', key: 'percent' } as const, null)
 
-// the working directory (with ~ for home) and the git branch, when it is inside a repo
+// the short directory name and the git branch, when it is inside a repo
 async function whereAmI($: EngineInterface) {
-  const dir = tildify(await $.session.cwd(), await $.env.get('HOME'))
-  const r = await $.process.run(['git', 'branch', '--show-current'], { timeoutMs: 3000 }).catch(() => null)
-  let branch = r && r.exitCode === 0 ? r.stdout.trim() : ''
-  if (r && r.exitCode === 0 && !branch) {
-    const head = await $.process.run(['git', 'rev-parse', '--short', 'HEAD'], { timeoutMs: 3000 }).catch(() => null)
-    branch = head && head.exitCode === 0 ? head.stdout.trim() : ''
+  const git = async (...args: string[]) => {
+    const r = await $.process.run(['git', ...args], { timeoutMs: 3000 }).catch(() => null)
+    return r && r.exitCode === 0 ? r.stdout.trim() : null
   }
+  const root = await git('rev-parse', '--show-toplevel')
+  const dir = '📍 ' + shortDir(await $.session.cwd(), root ?? undefined, await $.env.get('HOME'))
+  if (root === null) return dir
+  const branch = (await git('branch', '--show-current')) || (await git('rev-parse', '--short', 'HEAD'))
   return branch ? `${dir} ⎇ ${branch}` : dir
 }
 

@@ -38,23 +38,23 @@ test('the 5h and 7d limits go to the status line', async ($, on) => {
   expect(lines.some(l => l.endsWith('5h 12% · 7d 51%'))).toBe(true)
 })
 
-test('the status line starts with the directory (~ for home) and the git branch', async ($, on) => {
+test('in a repo the status line shows the repo folder, the path below it and the branch', async ($, on) => {
   mock.clock(on)
   const lines: any[] = []
   on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 12 }] } }) as any)
-  on('session.cwd', async () => ({ value: '/Users/me/work/app' }) as any)
+  on('session.cwd', async () => ({ value: '/Users/me/work/app/sub' }) as any)
   on('env.get', async () => ({ value: '/Users/me' }) as any)
-  on('process.run', async () => ({ value: { exitCode: 0, stdout: 'main\n', stderr: '' } }) as any)
+  on('process.run', async (_$: any, e: any) => ({ value: { exitCode: 0, stdout: e.argv[2] === '--show-toplevel' ? '/Users/me/work/app\n' : 'main\n', stderr: '' } }) as any)
   on('ui.status', async (_$, e) => {
     lines.push(e.text)
     return { value: undefined } as any
   })
   on('turn.complete', async () => ({ text: '' }) as any)
   await $.turn.complete(TURN)
-  expect(lines).toContain('~/work/app ⎇ main · 5h 12%')
+  expect(lines).toContain('📍 app/sub ⎇ main · 5h 12%')
 })
 
-test('outside a git repo only the directory shows', async ($, on) => {
+test('outside a git repo only the last two directories show', async ($, on) => {
   mock.clock(on)
   const lines: any[] = []
   on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [] } }) as any)
@@ -67,5 +67,5 @@ test('outside a git repo only the directory shows', async ($, on) => {
   })
   on('turn.complete', async () => ({ text: '' }) as any)
   await $.turn.complete(TURN)
-  expect(lines).toContain('~/work/app')
+  expect(lines).toContain('📍 …/work/app')
 })

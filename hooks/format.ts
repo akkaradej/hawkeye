@@ -24,3 +24,11 @@ export const tildify = (path: string, home?: string) => {
   const base = home.replace(/\/+$/, '')
   return path === base ? '~' : path.startsWith(base + '/') ? '~' + path.slice(base.length) : path
 }
+
+/** A short place name: inside a repo, the repo's folder name plus the path below it; elsewhere the last two segments. */
+export const shortDir = (cwd: string, root?: string, home?: string) => {
+  if (root && (cwd === root || cwd.startsWith(root + '/'))) return root.split('/').pop() + cwd.slice(root.length)
+  const path = tildify(cwd, home)
+  const segments = path.split('/').filter(Boolean)
+  return segments.length > 2 ? `…/${segments.slice(-2).join('/')}` : path
+}
