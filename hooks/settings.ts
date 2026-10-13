@@ -1,6 +1,6 @@
 import { DEFAULT_WARM_HOURS, WARM_HOURS } from './format'
 
-export type Settings = { cacheWarmHours: number; autoRecommend: boolean; autoEffort: boolean; nextSteps: boolean; judgeEffort: string; effortMin: string; effortMax: string; rebornFromPct: number }
+export type Settings = { cacheWarmHours: number; autoRecommend: boolean; autoEffort: boolean; nextSteps: boolean; judgeEffort: string; effortMin: string; effortMax: string; rebornFromPct: number; showLocation: boolean; showLimits: boolean }
 
 // the Reborn button shows once the context is above this many percent; 0 shows it always
 export const REBORN_PCTS = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50]
@@ -22,7 +22,7 @@ export const SETTINGS_STORE_KEY = 'settings'
 // The mod's settings live in this object: a /clear (the Reborn hand-off) resets atoms, not the module, so they
 // are read from here, never from an atom. Each file keeps an atom only as a redraw ping, flipped at every change.
 // The store keeps a copy for a reload, which loses the module. `$` cannot cross a file, so callers use the store.
-export const settings: Settings = { cacheWarmHours: DEFAULT_WARM_HOURS, autoRecommend: true, autoEffort: true, nextSteps: true, judgeEffort: 'medium', effortMin: 'low', effortMax: 'max', rebornFromPct: DEFAULT_REBORN_PCT }
+export const settings: Settings = { cacheWarmHours: DEFAULT_WARM_HOURS, autoRecommend: true, autoEffort: true, nextSteps: true, judgeEffort: 'medium', effortMin: 'low', effortMax: 'max', rebornFromPct: DEFAULT_REBORN_PCT, showLocation: true, showLimits: true }
 
 /** Remember one setting; returns all of them, to put in the store. */
 export function setSetting<K extends keyof Settings>(key: K, value: Settings[K]): Settings {
@@ -41,4 +41,6 @@ export function restoreSettings(kept?: unknown) {
   if (typeof stored.effortMax === 'string' && EFFORTS.includes(stored.effortMax)) settings.effortMax = stored.effortMax
   if (typeof stored.autoEffort === 'boolean') settings.autoEffort = stored.autoEffort
   if (typeof stored.nextSteps === 'boolean') settings.nextSteps = stored.nextSteps
+  if (typeof stored.showLocation === 'boolean') settings.showLocation = stored.showLocation
+  if (typeof stored.showLimits === 'boolean') settings.showLimits = stored.showLimits
 }

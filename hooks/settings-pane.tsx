@@ -38,36 +38,17 @@ export function registerSettingsPane(on: On) {
       await update($, settingsPing, p => !p)
       await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
     }
+    const chooseStatus = async (key: 'showLocation' | 'showLimits', shown: boolean) => {
+      const all = setSetting(key, shown)
+      await update($, settingsPing, p => !p)
+      await $.store.set(SETTINGS_STORE_KEY, all).catch(() => undefined)
+    }
+    const onOff = [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }]
     // one short line: a longer one wraps in a narrow pane and drew two
     const rule = <Text dimColor>{'─'.repeat(24)}</Text>
     const effortOptions = (list: string[]) => list.map(v => ({ value: v, label: v }))
     return (
       <Box flexDirection="column">
-        <Text bold>Auto effort: Haiku judges at</Text>
-        <Box marginY={1}>
-          <Select key="judge-effort" options={effortOptions(JUDGE_EFFORTS)} value={settings.judgeEffort} onSelect={value => void chooseEffort('judgeEffort', value)} />
-        </Box>
-        <Text bold>Auto effort: lowest</Text>
-        <Box marginY={1}>
-          <Select key="effort-min" options={effortOptions(EFFORTS)} value={settings.effortMin} onSelect={value => void chooseEffort('effortMin', value)} />
-        </Box>
-        <Text bold>Auto effort: highest</Text>
-        <Box marginY={1}>
-          <Select key="effort-max" options={effortOptions(EFFORTS)} value={settings.effortMax} onSelect={value => void chooseEffort('effortMax', value)} />
-        </Box>
-        <Text dimColor>Auto turns off when you pick an effort yourself.</Text>
-        <Text dimColor>Haiku and Fable keep their own effort: only Sonnet and Opus 5.5 are steered.</Text>
-        {rule}
-        <Text bold>Suggest Reborn from context</Text>
-        <Box marginY={1}>
-          <Select
-            key="reborn-at"
-            options={REBORN_PCTS.map(pct => ({ value: String(pct), label: pct === 0 ? 'always' : `${pct}%` }))}
-            value={String(settings.rebornFromPct)}
-            onSelect={value => void chooseReborn(Number(value))}
-          />
-        </Box>
-        {rule}
         <Text bold>Keep cache warm for</Text>
         <Box marginY={1}>
           <Select
@@ -85,6 +66,40 @@ export function registerSettingsPane(on: On) {
           ) : (
             <Button key="warm-now" label="Warm now and restore cycle" onPress={() => void $.command.run({ command: 'cache-ping', args: 'reset', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })} />
           )}
+        </Box>
+        {rule}
+        <Text bold>Suggest Reborn from context</Text>
+        <Box marginY={1}>
+          <Select
+            key="reborn-at"
+            options={REBORN_PCTS.map(pct => ({ value: String(pct), label: pct === 0 ? 'always' : `${pct}%` }))}
+            value={String(settings.rebornFromPct)}
+            onSelect={value => void chooseReborn(Number(value))}
+          />
+        </Box>
+        {rule}
+        <Text bold>Auto effort: Haiku judges at</Text>
+        <Box marginY={1}>
+          <Select key="judge-effort" options={effortOptions(JUDGE_EFFORTS)} value={settings.judgeEffort} onSelect={value => void chooseEffort('judgeEffort', value)} />
+        </Box>
+        <Text bold>Auto effort: lowest</Text>
+        <Box marginY={1}>
+          <Select key="effort-min" options={effortOptions(EFFORTS)} value={settings.effortMin} onSelect={value => void chooseEffort('effortMin', value)} />
+        </Box>
+        <Text bold>Auto effort: highest</Text>
+        <Box marginY={1}>
+          <Select key="effort-max" options={effortOptions(EFFORTS)} value={settings.effortMax} onSelect={value => void chooseEffort('effortMax', value)} />
+        </Box>
+        <Text dimColor>Auto turns off when you pick an effort yourself.</Text>
+        <Text dimColor>Haiku and Fable keep their own effort: only Sonnet and Opus 5.5 are steered.</Text>
+        {rule}
+        <Text bold>Status line: directory and branch</Text>
+        <Box marginY={1}>
+          <Select key="show-location" options={onOff} value={settings.showLocation ? 'on' : 'off'} onSelect={value => void chooseStatus('showLocation', value === 'on')} />
+        </Box>
+        <Text bold>Status line: usage limits</Text>
+        <Box marginY={1}>
+          <Select key="show-limits" options={onOff} value={settings.showLimits ? 'on' : 'off'} onSelect={value => void chooseStatus('showLimits', value === 'on')} />
         </Box>
       </Box>
     )

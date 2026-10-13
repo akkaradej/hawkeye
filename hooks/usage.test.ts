@@ -51,7 +51,7 @@ test('in a repo the status line shows the repo folder, the path below it and the
   })
   on('turn.complete', async () => ({ text: '' }) as any)
   await $.turn.complete(TURN)
-  expect(lines).toContain('📍 app/sub ⎇ main · 5h 12%')
+  expect(lines).toContain('$ app/sub ⎇ main · 5h 12%')
 })
 
 test('outside a git repo only the last two directories show', async ($, on) => {
@@ -67,5 +67,31 @@ test('outside a git repo only the last two directories show', async ($, on) => {
   })
   on('turn.complete', async () => ({ text: '' }) as any)
   await $.turn.complete(TURN)
-  expect(lines).toContain('📍 …/work/app')
+  expect(lines).toContain('$ …/work/app')
+})
+
+test('each part of the status line can be switched off in the settings pane', async ($, on) => {
+  mock.clock(on)
+  const lines: any[] = []
+  on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 12 }] } }) as any)
+  on('session.cwd', async () => ({ value: '/tmp/x' }) as any)
+  on('env.get', async () => ({ value: '/Users/me' }) as any)
+  on('process.run', async () => ({ value: { exitCode: 128, stdout: '', stderr: '' } }) as any)
+  on('store.set', async () => ({ value: undefined }) as any)
+  on('ui.status', async (_$, e) => {
+    lines.push(e.text)
+    return { value: undefined } as any
+  })
+  on('turn.complete', async () => ({ text: '' }) as any)
+  const pane = await $.ui.mount({ plugin: 'hawkeye', surface: 'terminal', component: 'Pane', requestId: 'settings', props: {} as any })
+  await pane.select({ key: 'show-location', value: 'off' })
+  await $.turn.complete(TURN)
+  expect(lines.at(-1)).toBe('5h 12%')
+  await pane.select({ key: 'show-location', value: 'on' })
+  await pane.select({ key: 'show-limits', value: 'off' })
+  await $.turn.complete(TURN)
+  expect(lines.at(-1)).toBe('$ /tmp/x')
+  await pane.select({ key: 'show-location', value: 'off' })
+  await $.turn.complete(TURN)
+  expect(lines.at(-1)).toBeUndefined()
 })
