@@ -1,23 +1,42 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Timer } from 'claude-code'
+import { tildify } from './format'
 
 const limits = atom({ plugin: 'hawkeye', key: 'limits' } as const, { fiveHour: null, sevenDay: null })
 const percent = atom({ plugin: 'hawkeye', key: 'percent' } as const, null)
+
+// the working directory (with ~ for home) and the git branch, when it is inside a repo
+async function whereAmI($: EngineInterface) {
+  const dir = tildify(await $.session.cwd(), await $.env.get('HOME'))
+  const r = await $.process.run(['git', 'branch', '--show-current'], { timeoutMs: 3000 }).catch(() => null)
+  let branch = r && r.exitCode === 0 ? r.stdout.trim() : ''
+  if (r && r.exitCode === 0 && !branch) {
+    const head = await $.process.run(['git', 'rev-parse', '--short', 'HEAD'], { timeoutMs: 3000 }).catch(() => null)
+    branch = head && head.exitCode === 0 ? head.stdout.trim() : ''
+  }
+  return branch ? `${dir} ⎇ ${branch}` : dir
+}
+
+// the directory, branch and 5h/7d limits live in the status line under the prompt (plain text: it has no colours)
+async function showStatus($: EngineInterface) {
+  const where = await whereAmI($).catch(() => '')
+  const { fiveHour, sevenDay } = await read($, limits)
+  const parts = [where, fiveHour !== null && `5h ${Math.round(fiveHour)}%`, sevenDay !== null && `7d ${Math.round(sevenDay)}%`].filter(Boolean)
+  $.ui.status(parts.length ? parts.join(' · ') : undefined)
+}
 
 async function takeReading($: EngineInterface) {
   try {
     const { context, rateLimits } = await $.session.usage()
     const pick = (kind: string) => rateLimits?.find(r => r.kind === kind)?.percentUsed ?? null
-    const fiveHour = pick('five_hour')
-    const sevenDay = pick('seven_day')
-    await update($, limits, () => ({ fiveHour, sevenDay }))
-    // the 5h and 7d limits live in the status line under the prompt (plain text: it has no colours)
-    const parts = [fiveHour !== null && `5h ${Math.round(fiveHour)}%`, sevenDay !== null && `7d ${Math.round(sevenDay)}%`].filter(Boolean)
-    $.ui.status(parts.length ? parts.join(' · ') : undefined)
-    if (!context || !context.window) return
-    const tokens = context.tokens ?? 0
-    if (tokens > 0) await update($, percent, () => Math.round(context.percent ?? (tokens / context.window) * 100))
+    await update($, limits, () => ({ fiveHour: pick('five_hour'), sevenDay: pick('seven_day') }))
+    if (context?.window) {
+      const tokens = context.tokens ?? 0
+      if (tokens > 0) await update($, percent, () => Math.round(context.percent ?? (tokens / context.window) * 100))
+    }
   } catch {}
+  // usage may not be ready yet; the directory and branch show regardless
+  await showStatus($).catch(() => {})
 }
 
 let ticker: Timer | undefined

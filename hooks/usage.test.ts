@@ -31,9 +31,41 @@ test('the 5h and 7d limits go to the status line', async ($, on) => {
   on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 12.4 }, { kind: 'seven_day', percentUsed: 51 }] } }) as any)
   on('ui.status', async (_$, e) => {
     lines.push(e.text)
-    return {} as any
+    return { value: undefined } as any
   })
   on('turn.complete', async () => ({ text: '' }) as any)
   await $.turn.complete(TURN)
-  expect(lines).toContain('5h 12% · 7d 51%')
+  expect(lines.some(l => l.endsWith('5h 12% · 7d 51%'))).toBe(true)
+})
+
+test('the status line starts with the directory (~ for home) and the git branch', async ($, on) => {
+  mock.clock(on)
+  const lines: any[] = []
+  on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 12 }] } }) as any)
+  on('session.cwd', async () => ({ value: '/Users/me/work/app' }) as any)
+  on('env.get', async () => ({ value: '/Users/me' }) as any)
+  on('process.run', async () => ({ value: { exitCode: 0, stdout: 'main\n', stderr: '' } }) as any)
+  on('ui.status', async (_$, e) => {
+    lines.push(e.text)
+    return { value: undefined } as any
+  })
+  on('turn.complete', async () => ({ text: '' }) as any)
+  await $.turn.complete(TURN)
+  expect(lines).toContain('~/work/app ⎇ main · 5h 12%')
+})
+
+test('outside a git repo only the directory shows', async ($, on) => {
+  mock.clock(on)
+  const lines: any[] = []
+  on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [] } }) as any)
+  on('session.cwd', async () => ({ value: '/Users/me/work/app' }) as any)
+  on('env.get', async () => ({ value: '/Users/me' }) as any)
+  on('process.run', async () => ({ value: { exitCode: 128, stdout: '', stderr: 'not a git repository' } }) as any)
+  on('ui.status', async (_$, e) => {
+    lines.push(e.text)
+    return { value: undefined } as any
+  })
+  on('turn.complete', async () => ({ text: '' }) as any)
+  await $.turn.complete(TURN)
+  expect(lines).toContain('~/work/app')
 })

@@ -17,3 +17,10 @@ export const clock = (ms: number) => {
 export const minutes = (ms: number) => `${Math.floor(Math.max(0, ms) / 60000)}m`
 
 export const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+/** Shows a path under the home directory as `~/...`. */
+export const tildify = (path: string, home?: string) => {
+  if (!home) return path
+  const base = home.replace(/\/+$/, '')
+  return path === base ? '~' : path.startsWith(base + '/') ? '~' + path.slice(base.length) : path
+}

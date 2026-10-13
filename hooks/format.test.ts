@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { TTL_MS, WARN_MS, clock, minutes } from './format'
+import { TTL_MS, WARN_MS, clock, minutes, tildify } from './format'
 
 test('constants: 1h TTL, 5 min warning', () => {
   expect(TTL_MS).toBe(3_600_000)
@@ -31,4 +31,11 @@ test('minutes floors to whole minutes', () => {
 
 test('minutes clamps negatives to 0m', () => {
   expect(minutes(-60_000)).toBe('0m')
+})
+
+test('tildify shows the home directory as ~', () => {
+  expect(tildify('/Users/a/work/x', '/Users/a')).toBe('~/work/x')
+  expect(tildify('/Users/a', '/Users/a')).toBe('~')
+  expect(tildify('/Users/ab/x', '/Users/a')).toBe('/Users/ab/x')
+  expect(tildify('/tmp/x', undefined)).toBe('/tmp/x')
 })
